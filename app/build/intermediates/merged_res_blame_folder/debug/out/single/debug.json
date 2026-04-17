@@ -1,0 +1,26 @@
+[
+    {
+        "merged": "com.ledger.task.app-merged_res-66:/drawable_ic_check.xml.flat",
+        "source": "com.ledger.task.app-main-68:/drawable/ic_check.xml"
+    },
+    {
+        "merged": "com.ledger.task.app-merged_res-66:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.ledger.task.app-main-68:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.ledger.task.app-merged_res-66:/drawable_ic_notification.xml.flat",
+        "source": "com.ledger.task.app-main-68:/drawable/ic_notification.xml"
+    },
+    {
+        "merged": "com.ledger.task.app-merged_res-66:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.ledger.task.app-main-68:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "com.ledger.task.app-merged_res-66:/drawable_ic_launcher_background.xml.flat",
+        "source": "com.ledger.task.app-main-68:/drawable/ic_launcher_background.xml"
+    },
+    {
+        "merged": "com.ledger.task.app-merged_res-66:/xml_file_paths.xml.flat",
+        "source": "com.ledger.task.app-main-68:/xml/file_paths.xml"
+    }
+]
