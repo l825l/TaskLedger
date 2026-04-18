@@ -1,0 +1,41 @@
+# Gradle
+.gradle/
+build/
+local.properties
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Android
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+*.so
+
+# Build
+app/build/
+app/release/
+
+# Local config
+*.local
+*.local.json
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Keystore (security)
+*.jks
+*.keystore
+
+# Screenshots (optional)
+screenshots/
