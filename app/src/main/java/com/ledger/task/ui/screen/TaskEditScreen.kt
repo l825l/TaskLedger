@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
@@ -115,6 +116,11 @@ fun TaskEditScreen(
         if (uiState.saved) onNavigateBack()
     }
 
+    // 删除成功后返回
+    LaunchedEffect(uiState.deleted) {
+        if (uiState.deleted) onNavigateBack()
+    }
+
     Scaffold(
         containerColor = DeepBackground,
         topBar = {
@@ -135,6 +141,17 @@ fun TaskEditScreen(
                     }
                 },
                 actions = {
+                    // 删除按钮（仅编辑模式显示）
+                    if (uiState.isEdit) {
+                        IconButton(onClick = { viewModel.onShowDeleteDialog(true) }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = context.getString(AppR.string.delete),
+                                tint = com.ledger.task.ui.theme.StatusOverdue
+                            )
+                        }
+                    }
+                    // 保存按钮
                     IconButton(
                         onClick = viewModel::save,
                         enabled = !uiState.isSaving
@@ -823,6 +840,28 @@ fun TaskEditScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { viewModel.onShowAddCategoryDialog(false) }) {
+                        Text("取消")
+                    }
+                }
+            )
+        }
+
+        // 删除确认对话框
+        if (uiState.showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { viewModel.onShowDeleteDialog(false) },
+                title = { Text("删除任务") },
+                text = { Text("确定要删除此任务吗？此操作无法撤销。") },
+                confirmButton = {
+                    TextButton(onClick = viewModel::delete) {
+                        Text(
+                            text = "删除",
+                            color = com.ledger.task.ui.theme.StatusOverdue
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.onShowDeleteDialog(false) }) {
                         Text("取消")
                     }
                 }

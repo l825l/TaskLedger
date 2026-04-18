@@ -42,6 +42,8 @@ data class TaskEditUiState(
     val isEdit: Boolean = false,
     val isSaving: Boolean = false,
     val saved: Boolean = false,
+    val deleted: Boolean = false,  // 删除成功标记
+    val showDeleteDialog: Boolean = false,  // 删除确认对话框
     val titleError: Boolean = false,
     val showPredecessorDialog: Boolean = false,
     val showRelatedDialog: Boolean = false,
@@ -389,5 +391,24 @@ class TaskEditViewModel(application: Application) : AndroidViewModel(application
             categories = updatedCategories,
             category = newCategory
         )
+    }
+
+    // 删除相关方法
+    fun onShowDeleteDialog(show: Boolean) {
+        _uiState.value = _uiState.value.copy(showDeleteDialog = show)
+    }
+
+    fun delete() {
+        val state = _uiState.value
+        if (!state.isEdit || state.id <= 0) return
+
+        viewModelScope.launch {
+            val task = repository.getById(state.id) ?: return@launch
+            // 取消提醒
+            ReminderManager.cancelReminder(getApplication(), state.id)
+            // 删除任务
+            repository.delete(task)
+            _uiState.value = state.copy(deleted = true, showDeleteDialog = false)
+        }
     }
 }
