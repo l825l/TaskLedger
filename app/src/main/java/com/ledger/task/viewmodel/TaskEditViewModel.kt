@@ -14,6 +14,9 @@ import com.ledger.task.data.model.RichContent
 import com.ledger.task.data.model.RichTextItem
 import com.ledger.task.data.model.Task
 import com.ledger.task.data.model.TaskStatus
+import com.ledger.task.domain.DependencyState
+import com.ledger.task.domain.DependencyValidationResult
+import com.ledger.task.domain.TaskDependencyValidator
 import com.ledger.task.notification.ReminderManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +42,9 @@ data class TaskEditUiState(
     val relatedIds: List<Long> = emptyList(),
     val predecessorTasks: List<Task> = emptyList(),
     val relatedTasks: List<Task> = emptyList(),
+    val dependencyState: DependencyState = DependencyState.NoDependencies,
+    val dependencyValidationError: DependencyValidationResult? = null,
+    val showDependencyBlockedDialog: Boolean = false,
     val isEdit: Boolean = false,
     val isSaving: Boolean = false,
     val saved: Boolean = false,
@@ -58,6 +64,7 @@ data class TaskEditUiState(
 class TaskEditViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = (application as TaskLedgerApp).repository
+    private val dependencyValidator = TaskDependencyValidator(repository)
 
     private val _uiState = MutableStateFlow(TaskEditUiState())
     val uiState: StateFlow<TaskEditUiState> = _uiState.asStateFlow()
@@ -74,6 +81,7 @@ class TaskEditViewModel(application: Application) : AndroidViewModel(application
             val task = repository.getById(taskId) ?: return@launch
             val predecessorTasks = getTasksByIds(task.predecessorIds)
             val relatedTasks = getTasksByIds(task.relatedIds)
+            val dependencyState = com.ledger.task.domain.DependencyStateCalculator.calculate(predecessorTasks)
             _uiState.value = TaskEditUiState(
                 id = task.id,
                 title = task.title,
@@ -89,6 +97,7 @@ class TaskEditViewModel(application: Application) : AndroidViewModel(application
                 relatedIds = task.relatedIds,
                 predecessorTasks = predecessorTasks,
                 relatedTasks = relatedTasks,
+                dependencyState = dependencyState,
                 isEdit = true
             )
         }
@@ -148,9 +157,11 @@ class TaskEditViewModel(application: Application) : AndroidViewModel(application
     fun onPredecessorIdsChange(newIds: List<Long>) {
         viewModelScope.launch {
             val newTasks = getTasksByIds(newIds)
+            val dependencyState = com.ledger.task.domain.DependencyStateCalculator.calculate(newTasks)
             _uiState.value = _uiState.value.copy(
                 predecessorIds = newIds,
-                predecessorTasks = newTasks
+                predecessorTasks = newTasks,
+                dependencyState = dependencyState
             )
         }
     }
@@ -291,10 +302,65 @@ class TaskEditViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun onDialogConfirmPredecessors(newIds: List<Long>) {
-        _uiState.value = _uiState.value.copy(
-            predecessorIds = newIds,
-            showPredecessorDialog = false
-        )
+        viewModelScope.launch {
+            // 验证每个前置依赖
+            val currentTaskId = _uiState.value.id
+            var hasError = false
+            var errorResult: DependencyValidationResult? = null
+
+            for (predecessorId in newIds) {
+                val result = dependencyValidator.validatePredecessorAddition(currentTaskId, predecessorId)
+                if (result != DependencyValidationResult.Valid) {
+                    hasError = true
+                    errorResult = result
+                    break
+                }
+            }
+
+            if (hasError) {
+                _uiState.value = _uiState.value.copy(
+                    dependencyValidationError = errorResult
+                )
+                return@launch
+            }
+
+            // 验证通过，更新状态
+            val newTasks = getTasksByIds(newIds)
+            val dependencyState = com.ledger.task.domain.DependencyStateCalculator.calculate(newTasks)
+            _uiState.value = _uiState.value.copy(
+                predecessorIds = newIds,
+                predecessorTasks = newTasks,
+                dependencyState = dependencyState,
+                showPredecessorDialog = false,
+                dependencyValidationError = null
+            )
+        }
+    }
+
+    fun onDismissDependencyError() {
+        _uiState.value = _uiState.value.copy(dependencyValidationError = null)
+    }
+
+    fun onShowDependencyBlockedDialog(show: Boolean) {
+        _uiState.value = _uiState.value.copy(showDependencyBlockedDialog = show)
+    }
+
+    /**
+     * 带验证的状态变更
+     * 如果任务被阻塞，不允许改为进行中或已完成
+     */
+    fun onStatusChangeWithValidation(newStatus: TaskStatus) {
+        val currentState = _uiState.value
+
+        // 如果要开始或完成任务，检查前置依赖
+        if (newStatus == TaskStatus.IN_PROGRESS || newStatus == TaskStatus.DONE) {
+            if (currentState.dependencyState.isBlocked) {
+                _uiState.value = currentState.copy(showDependencyBlockedDialog = true)
+                return
+            }
+        }
+
+        onStatusChange(newStatus)
     }
 
     fun onDialogConfirmRelated(newIds: List<Long>) {

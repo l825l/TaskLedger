@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -161,14 +162,44 @@ fun TaskEditScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            // 顶部：状态滑块
-            StatusSlider(
-                currentStatus = uiState.status,
-                onStatusChange = viewModel::onStatusChange,
+            // 顶部：状态滑块（带阻塞提示）
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 16.dp)
-            )
+            ) {
+                // 阻塞提示
+                if (uiState.dependencyState.isBlocked) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(com.ledger.task.ui.theme.StatusOverdue.copy(alpha = 0.15f))
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Block,
+                            contentDescription = "被阻塞",
+                            tint = com.ledger.task.ui.theme.StatusOverdue,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "存在未完成的前置依赖，无法开始任务",
+                            color = com.ledger.task.ui.theme.StatusOverdue,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                StatusSlider(
+                    currentStatus = uiState.status,
+                    onStatusChange = viewModel::onStatusChangeWithValidation,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             // 中部：属性网格
             Column(
@@ -824,6 +855,61 @@ fun TaskEditScreen(
                 dismissButton = {
                     TextButton(onClick = { viewModel.onShowAddCategoryDialog(false) }) {
                         Text("取消")
+                    }
+                }
+            )
+        }
+
+        // 依赖验证错误对话框
+        if (uiState.dependencyValidationError != null) {
+            AlertDialog(
+                onDismissRequest = { viewModel.onDismissDependencyError() },
+                title = { Text("无法添加依赖") },
+                text = {
+                    Text(when (val error = uiState.dependencyValidationError) {
+                        is com.ledger.task.domain.DependencyValidationResult.SelfReference -> "任务不能依赖自身"
+                        is com.ledger.task.domain.DependencyValidationResult.DirectCycle -> "检测到循环依赖，将形成闭环"
+                        is com.ledger.task.domain.DependencyValidationResult.PredecessorNotFound -> "前置任务不存在"
+                        else -> "未知错误"
+                    })
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.onDismissDependencyError() }) {
+                        Text("知道了")
+                    }
+                }
+            )
+        }
+
+        // 阻塞提示对话框
+        if (uiState.showDependencyBlockedDialog) {
+            AlertDialog(
+                onDismissRequest = { viewModel.onShowDependencyBlockedDialog(false) },
+                title = { Text("无法开始任务") },
+                text = {
+                    Column {
+                        Text("以下前置依赖尚未完成：")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        (uiState.dependencyState as? com.ledger.task.domain.DependencyState.Blocked)
+                            ?.blockingTasks?.forEach { task ->
+                                Row(
+                                    modifier = Modifier.padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .background(com.ledger.task.ui.theme.StatusOverdue, CircleShape)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(task.title)
+                                }
+                            }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.onShowDependencyBlockedDialog(false) }) {
+                        Text("知道了")
                     }
                 }
             )
