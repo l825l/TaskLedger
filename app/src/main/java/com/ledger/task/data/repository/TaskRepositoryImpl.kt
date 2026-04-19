@@ -29,18 +29,16 @@ class TaskRepositoryImpl(private val dao: TaskDao) : TaskRepository {
         .onFailure { if (it is kotlin.coroutines.cancellation.CancellationException) throw it }
         .getOrNull() ?: -1L
 
-    override suspend fun update(task: Task) {
-        runCatching { dao.update(task.toEntity()) }
-            .onFailure {
-                if (it is kotlin.coroutines.cancellation.CancellationException) throw it
-            }
+    override suspend fun update(task: Task): Result<Unit> = runCatching {
+        dao.update(task.toEntity())
+    }.onFailure {
+        if (it is kotlin.coroutines.cancellation.CancellationException) throw it
     }
 
-    override suspend fun delete(task: Task) {
-        runCatching { dao.delete(task.toEntity()) }
-            .onFailure {
-                if (it is kotlin.coroutines.cancellation.CancellationException) throw it
-            }
+    override suspend fun delete(task: Task): Result<Unit> = runCatching {
+        dao.delete(task.toEntity())
+    }.onFailure {
+        if (it is kotlin.coroutines.cancellation.CancellationException) throw it
     }
 
     override fun countAll(): Flow<Int> = dao.countAll()

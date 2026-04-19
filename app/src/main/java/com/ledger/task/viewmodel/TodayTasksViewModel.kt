@@ -10,6 +10,9 @@ import com.ledger.task.data.model.TaskStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
@@ -32,39 +35,30 @@ class TodayTasksViewModel(application: Application) : AndroidViewModel(applicati
 
     private val repository = (application as TaskLedgerApp).repository
 
-    private val _uiState = MutableStateFlow(TodayTasksUiState())
-    val uiState: StateFlow<TodayTasksUiState> = _uiState.asStateFlow()
+    private val _isSorting = MutableStateFlow(false)
 
-    init {
-        loadTodayTasks()
-    }
+    // 直接将 Flow 转换为 StateFlow，避免中间 MutableStateFlow
+    val uiState: StateFlow<TodayTasksUiState> = run {
+        val today = LocalDate.now()
+        val todayStart = today.atTime(LocalTime.MIN)
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val todayEnd = today.plusDays(1).atTime(LocalTime.MIN)
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-    private var loadJob: kotlinx.coroutines.Job? = null
-
-    fun loadTodayTasks() {
-        // 取消之前的订阅，避免重复订阅
-        loadJob?.cancel()
-
-        loadJob = viewModelScope.launch {
-            val today = LocalDate.now()
-            // 计算今天的开始和结束毫秒数（本地时区）
-            val todayStart = today.atTime(LocalTime.MIN)
-                .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            val todayEnd = today.plusDays(1).atTime(LocalTime.MIN)
-                .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-
-            repository.getTodayTasks(todayStart, todayEnd)
-                .collect { tasks ->
-                    val completedCount = tasks.count { it.status == TaskStatus.DONE }
-                    val totalCount = tasks.size
-                    _uiState.value = TodayTasksUiState(
-                        tasks = tasks,
-                        isSorting = false,
-                        completedCount = completedCount,
-                        totalCount = totalCount
-                    )
-                }
-        }
+        repository.getTodayTasks(todayStart, todayEnd)
+            .map { tasks ->
+                TodayTasksUiState(
+                    tasks = tasks,
+                    isSorting = _isSorting.value,
+                    completedCount = tasks.count { it.status == TaskStatus.DONE },
+                    totalCount = tasks.size
+                )
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = TodayTasksUiState()
+            )
     }
 
     fun onTaskCompleted(taskId: Long) {
@@ -135,18 +129,19 @@ class TodayTasksViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun reorderTasks(fromIndex: Int, toIndex: Int) {
-        val currentTasks = _uiState.value.tasks.toMutableList()
+        val currentTasks = uiState.value.tasks.toMutableList()
         if (fromIndex in currentTasks.indices && toIndex in currentTasks.indices && fromIndex != toIndex) {
             // 先更新 UI
+            _isSorting.value = true
             val task = currentTasks.removeAt(fromIndex)
             currentTasks.add(toIndex, task)
-            _uiState.value = TodayTasksUiState(tasks = currentTasks, isSorting = true)
 
             // 保存排序到数据库
             viewModelScope.launch {
                 currentTasks.forEachIndexed { index, t ->
                     repository.updateSortOrder(t.id, index)
                 }
+                _isSorting.value = false
             }
         }
     }

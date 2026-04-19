@@ -7,9 +7,7 @@ import com.ledger.task.TaskLedgerApp
 import com.ledger.task.data.model.Priority
 import com.ledger.task.data.model.Task
 import com.ledger.task.data.model.TaskStatus
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,32 +29,18 @@ class PriorityTasksViewModel(application: Application) : AndroidViewModel(applic
 
     private val repository = (application as TaskLedgerApp).repository
 
-    private val _uiState = MutableStateFlow(PriorityTasksUiState())
-    val uiState: StateFlow<PriorityTasksUiState> = _uiState.asStateFlow()
-
-    // 使用 stateIn 将 Flow 转换为 StateFlow，避免 shareIn + collect 的低效用法
-    private val priorityTasksFlow: StateFlow<List<Task>> = run {
+    // 直接将 Flow 转换为 StateFlow，避免中间 MutableStateFlow
+    val uiState: StateFlow<PriorityTasksUiState> = run {
         val nowMillis = LocalDateTime.now()
             .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
         repository.getPriorityTasks(nowMillis)
+            .map { tasks -> PriorityTasksUiState(tasks = tasks) }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
-                initialValue = emptyList()
+                initialValue = PriorityTasksUiState()
             )
-    }
-
-    init {
-        loadPriorityTasks()
-    }
-
-    fun loadPriorityTasks() {
-        viewModelScope.launch {
-            priorityTasksFlow.collect { tasks ->
-                _uiState.value = PriorityTasksUiState(tasks = tasks)
-            }
-        }
     }
 
     fun onTaskCompleted(taskId: Long) {

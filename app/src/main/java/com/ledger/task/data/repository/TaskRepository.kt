@@ -14,8 +14,8 @@ interface TaskRepository {
     suspend fun getAllNow(): List<Task>
     suspend fun getById(id: Long): Task?
     suspend fun insert(task: Task): Long
-    suspend fun update(task: Task)
-    suspend fun delete(task: Task)
+    suspend fun update(task: Task): Result<Unit>
+    suspend fun delete(task: Task): Result<Unit>
     fun countAll(): Flow<Int>
     fun countInProgress(): Flow<Int>
     fun countDone(): Flow<Int>

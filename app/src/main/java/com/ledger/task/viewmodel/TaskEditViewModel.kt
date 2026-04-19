@@ -233,6 +233,7 @@ class TaskEditViewModel(application: Application) : AndroidViewModel(application
             }
 
             _uiState.value = _uiState.value.copy(isSaving = false, saved = true)
+            clearAvailableTasksCache()
         }
     }
 

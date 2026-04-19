@@ -26,6 +26,8 @@ object BackupPasswordProtection {
     private const val RECOVERY_CODE_LENGTH = 8
     private const val RECOVERY_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // 排除易混淆字符
 
+    private const val MIN_PASSWORD_LENGTH = 8
+
     /**
      * 使用密码加密数据
      * @param password 用户设置的备份密码
@@ -33,8 +35,8 @@ object BackupPasswordProtection {
      * @return 加密后的数据（salt + iv + ciphertext）
      */
     fun encrypt(password: String, data: ByteArray): ByteArray {
-        if (password.length < 6) {
-            throw IllegalArgumentException("密码长度至少6位")
+        if (password.length < MIN_PASSWORD_LENGTH) {
+            throw IllegalArgumentException("密码长度至少${MIN_PASSWORD_LENGTH}位")
         }
 
         // 生成随机 salt
@@ -143,7 +145,7 @@ object BackupPasswordProtection {
      * @return 密码是否足够强
      */
     fun validatePasswordStrength(password: String): PasswordStrength {
-        if (password.length < 6) {
+        if (password.length < MIN_PASSWORD_LENGTH) {
             return PasswordStrength.TOO_SHORT
         }
 
@@ -172,7 +174,7 @@ object BackupPasswordProtection {
  * 密码强度等级
  */
 enum class PasswordStrength(val description: String) {
-    TOO_SHORT("密码长度至少6位"),
+    TOO_SHORT("密码长度至少8位"),
     WEAK("密码强度：弱"),
     MEDIUM("密码强度：中"),
     STRONG("密码强度：强")
