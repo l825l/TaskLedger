@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
@@ -56,19 +57,19 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.ledger.task.data.model.DisplayStatus
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.Task
+import com.ledger.task.domain.model.DisplayStatus
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.Task
 import com.ledger.task.ui.component.CategoryTag
 import com.ledger.task.ui.component.DraggableFloatingActionButton
 import com.ledger.task.ui.component.EmptyState
 import com.ledger.task.ui.component.PriorityBadge
 import com.ledger.task.ui.component.StatusTag
-import com.ledger.task.ui.theme.DeepBackground
 import com.ledger.task.ui.theme.PriorityHighBg
 import com.ledger.task.ui.theme.StatusDone
-import com.ledger.task.ui.theme.SurfaceBackground
-import com.ledger.task.ui.theme.TextMuted
+import com.ledger.task.ui.theme.getDeepBackground
+import com.ledger.task.ui.theme.getSurfaceBackground
+import com.ledger.task.ui.theme.getTextMuted
 import com.ledger.task.viewmodel.PriorityTasksUiState
 import com.ledger.task.viewmodel.PriorityTasksViewModel
 import java.time.Duration
@@ -92,7 +93,7 @@ fun PriorityTasksScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(DeepBackground)
+            .background(getDeepBackground())
     ) {
         Column(
             modifier = Modifier
@@ -116,7 +117,7 @@ fun PriorityTasksScreen(
                 ) {
                     Text(
                         text = "总计: 0",
-                        color = TextMuted,
+                        color = getTextMuted(),
                         style = MaterialTheme.typography.labelMedium,
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier
@@ -160,6 +161,7 @@ fun PriorityTasksScreen(
                                 onCompleted = { viewModel.onTaskCompleted(task.id) },
                                 onPriorityUpgrade = { viewModel.onPriorityUpgrade(task.id) },
                                 onPriorityDowngrade = { viewModel.onPriorityDowngrade(task.id) },
+                                onDelete = { viewModel.onTaskDelete(task.id) },
                                 isCurrentlySwiped = currentlySwipedTaskId == task.id,
                                 onSwipeStateChanged = { isSwiped ->
                                     if (isSwiped) {
@@ -175,7 +177,7 @@ fun PriorityTasksScreen(
 
                 Text(
                     text = "总计: ${uiState.tasks.size}",
-                    color = TextMuted,
+                    color = getTextMuted(),
                     style = MaterialTheme.typography.labelMedium,
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier
@@ -206,6 +208,7 @@ private fun SwipeablePriorityTaskRow(
     onCompleted: () -> Unit,
     onPriorityUpgrade: () -> Unit,
     onPriorityDowngrade: () -> Unit,
+    onDelete: () -> Unit = {},
     isCurrentlySwiped: Boolean = false,
     onSwipeStateChanged: (Boolean) -> Unit = {}
 ) {
@@ -217,9 +220,11 @@ private fun SwipeablePriorityTaskRow(
 
     // 降级确认对话框
     var showDowngradeDialog by remember { mutableStateOf(false) }
+    // 删除确认对话框
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     // 滑动按钮宽度
-    val actionButtonWidth = with(density) { 120.dp.toPx() }
+    val actionButtonWidth = with(density) { 180.dp.toPx() }
 
     val formatter = DateTimeFormatter.ofPattern("HH:mm")
     val fullFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm")
@@ -291,7 +296,7 @@ private fun SwipeablePriorityTaskRow(
             Row(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .width(120.dp)
+                    .width(180.dp)
                     .height(68.dp)
                     .clip(RoundedCornerShape(12.dp))
             ) {
@@ -323,15 +328,14 @@ private fun SwipeablePriorityTaskRow(
                     }
                 }
 
-                // 取消按钮
+                // 删除按钮
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(68.dp)
-                        .background(Color(0xFF888888))
+                        .background(MaterialTheme.colorScheme.error)
                         .clickable {
-                            swipeOffset = 0f
-                            onSwipeStateChanged(false)
+                            showDeleteDialog = true
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -339,19 +343,45 @@ private fun SwipeablePriorityTaskRow(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "取消",
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "删除",
                             tint = Color.White,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            text = "取消",
+                            text = "删除",
                             color = Color.White,
                             style = MaterialTheme.typography.labelSmall
                         )
                     }
                 }
             }
+        }
+
+        // 删除确认对话框
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("确认删除") },
+                text = { Text("确定要删除任务「${task.title}」吗？此操作不可撤销。") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onDelete()
+                            showDeleteDialog = false
+                            swipeOffset = 0f
+                            onSwipeStateChanged(false)
+                        }
+                    ) {
+                        Text("删除", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("取消")
+                    }
+                }
+            )
         }
 
         // 右滑背景按钮（在卡片左侧显示）
@@ -515,7 +545,7 @@ private fun SwipeablePriorityTaskRow(
                 ) {
                     Text(
                         text = String.format("%02d", index + 1),
-                        color = TextMuted,
+                        color = getTextMuted(),
                         style = MaterialTheme.typography.labelMedium,
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier.width(32.dp)
@@ -589,7 +619,7 @@ private fun SwipeablePriorityTaskRow(
                         }
                         Text(
                             text = text,
-                            color = TextMuted,
+                            color = getTextMuted(),
                             style = MaterialTheme.typography.labelSmall,
                             fontFamily = FontFamily.Monospace,
                             modifier = Modifier.weight(1f)

@@ -4,25 +4,31 @@ import android.app.Application
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.ledger.task.TaskLedgerApp
 import com.ledger.task.data.local.TaskEntity
+import com.ledger.task.data.local.serializeToString
 import com.ledger.task.data.local.toDomain
-import com.ledger.task.data.model.CategoryNode
-import com.ledger.task.data.model.DefaultCategories
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.RichContent
-import com.ledger.task.data.model.RichTextItem
-import com.ledger.task.data.model.Task
-import com.ledger.task.data.model.TaskStatus
+import com.ledger.task.domain.model.CategoryNode
+import com.ledger.task.domain.model.DefaultCategories
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.Recurrence
+import com.ledger.task.domain.model.RecurrenceType
+import com.ledger.task.domain.model.RichContent
+import com.ledger.task.domain.model.RichTextItem
+import com.ledger.task.domain.model.SubTask
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.model.TaskStatus
 import com.ledger.task.domain.DependencyState
 import com.ledger.task.domain.DependencyValidationResult
 import com.ledger.task.domain.TaskDependencyValidator
+import com.ledger.task.domain.repository.TaskRepository
+import com.ledger.task.domain.usecase.CompleteTaskUseCase
 import com.ledger.task.notification.ReminderManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -42,9 +48,15 @@ data class TaskEditUiState(
     val relatedIds: List<Long> = emptyList(),
     val predecessorTasks: List<Task> = emptyList(),
     val relatedTasks: List<Task> = emptyList(),
+    // 过滤后的相关任务（排除已在前置依赖中的）
+    val filteredRelatedTasks: List<Task> = emptyList(),
     val dependencyState: DependencyState = DependencyState.NoDependencies,
     val dependencyValidationError: DependencyValidationResult? = null,
     val showDependencyBlockedDialog: Boolean = false,
+    // 删除确认对话框
+    val showRemoveConfirmDialog: Boolean = false,
+    val removeTargetTaskId: Long? = null,
+    val removeTargetIsPredecessor: Boolean = true,
     val isEdit: Boolean = false,
     val isSaving: Boolean = false,
     val saved: Boolean = false,
@@ -58,12 +70,20 @@ data class TaskEditUiState(
     val newCategoryName: String = "",
     val newCategoryColor: Color = DefaultCategories.ColorDefault,
     val editingCategoryId: String? = null,
-    val availableTasksLoaded: Boolean = false  // 标记是否已加载可用任务
+    val availableTasksLoaded: Boolean = false,  // 标记是否已加载可用任务
+    // 循环任务
+    val recurrence: Recurrence? = null,
+    val showRecurrenceDialog: Boolean = false,
+    // 子任务
+    val subTasks: List<SubTask> = emptyList()
 )
 
-class TaskEditViewModel(application: Application) : AndroidViewModel(application) {
+class TaskEditViewModel(
+    application: Application,
+    private val repository: TaskRepository,
+    private val completeTaskUseCase: CompleteTaskUseCase
+) : AndroidViewModel(application) {
 
-    private val repository = (application as TaskLedgerApp).repository
     private val dependencyValidator = TaskDependencyValidator(repository)
 
     private val _uiState = MutableStateFlow(TaskEditUiState())
@@ -79,9 +99,14 @@ class TaskEditViewModel(application: Application) : AndroidViewModel(application
         }
         viewModelScope.launch {
             val task = repository.getById(taskId) ?: return@launch
-            val predecessorTasks = getTasksByIds(task.predecessorIds)
-            val relatedTasks = getTasksByIds(task.relatedIds)
+            val predecessorTasks = getTasksByIds(task.predecessorIds).sortedByPriority()
+            val relatedTasks = getTasksByIds(task.relatedIds).sortedByPriority()
+            // 过滤相关任务：排除已在前置依赖中的
+            val predecessorIdsSet = task.predecessorIds.toSet()
+            val filteredRelatedTasks = relatedTasks.filter { it.id !in predecessorIdsSet }
             val dependencyState = com.ledger.task.domain.DependencyStateCalculator.calculate(predecessorTasks)
+            // 加载子任务
+            val subTasks = repository.getSubTasksNow(taskId)
             _uiState.value = TaskEditUiState(
                 id = task.id,
                 title = task.title,
@@ -97,7 +122,10 @@ class TaskEditViewModel(application: Application) : AndroidViewModel(application
                 relatedIds = task.relatedIds,
                 predecessorTasks = predecessorTasks,
                 relatedTasks = relatedTasks,
+                filteredRelatedTasks = filteredRelatedTasks,
                 dependencyState = dependencyState,
+                recurrence = task.recurrence,
+                subTasks = subTasks,
                 isEdit = true
             )
         }
@@ -156,11 +184,15 @@ class TaskEditViewModel(application: Application) : AndroidViewModel(application
 
     fun onPredecessorIdsChange(newIds: List<Long>) {
         viewModelScope.launch {
-            val newTasks = getTasksByIds(newIds)
+            val newTasks = getTasksByIds(newIds).sortedByPriority()
             val dependencyState = com.ledger.task.domain.DependencyStateCalculator.calculate(newTasks)
+            // 更新过滤后的相关任务
+            val newPredecessorIdsSet = newIds.toSet()
+            val filteredRelatedTasks = _uiState.value.relatedTasks.filter { it.id !in newPredecessorIdsSet }
             _uiState.value = _uiState.value.copy(
                 predecessorIds = newIds,
                 predecessorTasks = newTasks,
+                filteredRelatedTasks = filteredRelatedTasks,
                 dependencyState = dependencyState
             )
         }
@@ -168,11 +200,29 @@ class TaskEditViewModel(application: Application) : AndroidViewModel(application
 
     fun onRelatedIdsChange(newIds: List<Long>) {
         viewModelScope.launch {
-            val newTasks = getTasksByIds(newIds)
+            val newTasks = getTasksByIds(newIds).sortedByPriority()
+            // 过滤相关任务：排除已在前置依赖中的
+            val predecessorIdsSet = _uiState.value.predecessorIds.toSet()
+            val filteredRelatedTasks = newTasks.filter { it.id !in predecessorIdsSet }
             _uiState.value = _uiState.value.copy(
                 relatedIds = newIds,
-                relatedTasks = newTasks
+                relatedTasks = newTasks,
+                filteredRelatedTasks = filteredRelatedTasks
             )
+        }
+    }
+
+    /**
+     * 按优先级排序任务列表
+     */
+    private fun List<Task>.sortedByPriority(): List<Task> {
+        return this.sortedBy { task ->
+            when (task.priority) {
+                com.ledger.task.domain.model.Priority.HIGH -> 0
+                com.ledger.task.domain.model.Priority.MEDIUM -> 1
+                com.ledger.task.domain.model.Priority.NORMAL -> 2
+                com.ledger.task.domain.model.Priority.LOW -> 3
+            }
         }
     }
 
@@ -221,30 +271,174 @@ class TaskEditViewModel(application: Application) : AndroidViewModel(application
                 richContent = state.richContent.serialize(),
                 predecessorIds = state.predecessorIds.joinToString(","),
                 relatedIds = state.relatedIds.joinToString(","),
-                completedAt = state.completedAt
+                completedAt = state.completedAt,
+                recurrence = state.recurrence?.serializeToString(),
+                isRecurringInstance = false,
+                parentRecurringId = null
             )
             val task = entity.toDomain()
-            val taskId = if (state.isEdit) {
-                repository.update(task)
-                state.id
+
+            val taskId: Long = if (state.isEdit) {
+                val result = repository.update(task)
+                result.fold(
+                    onSuccess = { state.id },
+                    onFailure = {
+                        _uiState.value = _uiState.value.copy(isSaving = false)
+                        return@launch
+                    }
+                )
             } else {
-                repository.insert(task)
+                val newId = repository.insert(task)
+                if (newId <= 0) {
+                    _uiState.value = _uiState.value.copy(isSaving = false)
+                    return@launch
+                }
+                newId
             }
 
             // 调度或取消提醒
-            if (state.status != TaskStatus.DONE && taskId > 0) {
-                ReminderManager.scheduleReminder(
+            if (state.status != TaskStatus.DONE) {
+                ReminderManager.scheduleReminderIfEnabled(
                     context = getApplication(),
                     taskId = taskId,
                     title = state.title,
                     deadline = state.deadline
                 )
-            } else if (state.status == TaskStatus.DONE && taskId > 0) {
+            } else {
                 ReminderManager.cancelReminder(getApplication(), taskId)
             }
 
             _uiState.value = _uiState.value.copy(isSaving = false, saved = true)
             clearAvailableTasksCache()
+        }
+    }
+
+    // ==================== 循环任务相关方法 ====================
+
+    /**
+     * 显示循环设置对话框
+     */
+    fun onShowRecurrenceDialog(show: Boolean) {
+        _uiState.value = _uiState.value.copy(showRecurrenceDialog = show)
+    }
+
+    /**
+     * 设置循环类型
+     */
+    fun onRecurrenceTypeChange(type: RecurrenceType) {
+        val current = _uiState.value.recurrence
+        _uiState.value = _uiState.value.copy(
+            recurrence = Recurrence(
+                type = type,
+                interval = current?.interval ?: 1,
+                endDate = current?.endDate,
+                daysOfWeek = if (type == RecurrenceType.WEEKLY) {
+                    current?.daysOfWeek ?: setOf(DayOfWeek.MONDAY)
+                } else null
+            )
+        )
+    }
+
+    /**
+     * 设置循环间隔
+     */
+    fun onRecurrenceIntervalChange(interval: Int) {
+        val current = _uiState.value.recurrence ?: return
+        _uiState.value = _uiState.value.copy(
+            recurrence = current.copy(interval = interval.coerceIn(1, 99))
+        )
+    }
+
+    /**
+     * 设置循环结束日期
+     */
+    fun onRecurrenceEndDateChange(date: LocalDateTime?) {
+        val current = _uiState.value.recurrence ?: return
+        _uiState.value = _uiState.value.copy(
+            recurrence = current.copy(endDate = date)
+        )
+    }
+
+    /**
+     * 切换周几
+     */
+    fun onDayOfWeekToggle(day: DayOfWeek) {
+        val current = _uiState.value.recurrence ?: return
+        val currentDays = current.daysOfWeek ?: emptySet()
+        val newDays = if (day in currentDays) {
+            currentDays - day
+        } else {
+            currentDays + day
+        }
+        _uiState.value = _uiState.value.copy(
+            recurrence = current.copy(daysOfWeek = newDays.takeIf { it.isNotEmpty() })
+        )
+    }
+
+    /**
+     * 清除循环设置
+     */
+    fun onClearRecurrence() {
+        _uiState.value = _uiState.value.copy(
+            recurrence = null,
+            showRecurrenceDialog = false
+        )
+    }
+
+    /**
+     * 确认循环设置
+     */
+    fun onConfirmRecurrence() {
+        _uiState.value = _uiState.value.copy(showRecurrenceDialog = false)
+    }
+
+    // ==================== 子任务相关方法 ====================
+
+    /**
+     * 加载子任务
+     */
+    fun loadSubTasks(parentId: Long) {
+        viewModelScope.launch {
+            val subTasks = repository.getSubTasksNow(parentId)
+            _uiState.value = _uiState.value.copy(subTasks = subTasks)
+        }
+    }
+
+    /**
+     * 添加子任务
+     */
+    fun onAddSubTask(title: String) {
+        val parentId = _uiState.value.id
+        if (parentId <= 0) return // 新任务尚未保存，无法添加子任务
+
+        viewModelScope.launch {
+            val subTask = SubTask(
+                parentId = parentId,
+                title = title,
+                sortOrder = _uiState.value.subTasks.size
+            )
+            repository.insertSubTask(subTask)
+            loadSubTasks(parentId)
+        }
+    }
+
+    /**
+     * 切换子任务完成状态
+     */
+    fun onToggleSubTask(subTask: SubTask) {
+        viewModelScope.launch {
+            repository.updateSubTask(subTask.toggle())
+            loadSubTasks(subTask.parentId)
+        }
+    }
+
+    /**
+     * 删除子任务
+     */
+    fun onDeleteSubTask(subTask: SubTask) {
+        viewModelScope.launch {
+            repository.deleteSubTask(subTask.id)
+            loadSubTasks(subTask.parentId)
         }
     }
 
@@ -325,7 +519,7 @@ class TaskEditViewModel(application: Application) : AndroidViewModel(application
             }
 
             // 验证通过，更新状态
-            val newTasks = getTasksByIds(newIds)
+            val newTasks = getTasksByIds(newIds).sortedByPriority()
             val dependencyState = com.ledger.task.domain.DependencyStateCalculator.calculate(newTasks)
             _uiState.value = _uiState.value.copy(
                 predecessorIds = newIds,
@@ -343,6 +537,86 @@ class TaskEditViewModel(application: Application) : AndroidViewModel(application
 
     fun onShowDependencyBlockedDialog(show: Boolean) {
         _uiState.value = _uiState.value.copy(showDependencyBlockedDialog = show)
+    }
+
+    /**
+     * 显示删除确认对话框
+     */
+    fun onShowRemoveConfirmDialog(taskId: Long, isPredecessor: Boolean) {
+        _uiState.value = _uiState.value.copy(
+            showRemoveConfirmDialog = true,
+            removeTargetTaskId = taskId,
+            removeTargetIsPredecessor = isPredecessor
+        )
+    }
+
+    /**
+     * 取消删除
+     */
+    fun onDismissRemoveConfirmDialog() {
+        _uiState.value = _uiState.value.copy(
+            showRemoveConfirmDialog = false,
+            removeTargetTaskId = null
+        )
+    }
+
+    /**
+     * 确认删除关联任务
+     */
+    fun onConfirmRemoveTask() {
+        val state = _uiState.value
+        val taskId = state.removeTargetTaskId ?: return
+        val isPredecessor = state.removeTargetIsPredecessor
+
+        if (isPredecessor) {
+            val newIds = state.predecessorIds.filter { it != taskId }
+            onPredecessorIdsChange(newIds)
+        } else {
+            val newIds = state.relatedIds.filter { it != taskId }
+            onRelatedIdsChange(newIds)
+        }
+
+        _uiState.value = _uiState.value.copy(
+            showRemoveConfirmDialog = false,
+            removeTargetTaskId = null
+        )
+    }
+
+    /**
+     * 快速完成关联任务
+     */
+    fun onQuickCompleteTask(taskId: Long) {
+        viewModelScope.launch {
+            completeTaskUseCase(taskId)
+                .onSuccess {
+                    // 刷新前置依赖列表以更新依赖状态
+                    val currentId = _uiState.value.id
+                    if (currentId > 0) {
+                        loadTask(currentId)
+                    }
+                }
+        }
+    }
+
+    /**
+     * 撤销完成关联任务
+     */
+    fun onQuickUndoCompleteTask(taskId: Long) {
+        viewModelScope.launch {
+            val task = repository.getById(taskId) ?: return@launch
+            val updatedTask = task.copy(
+                status = TaskStatus.PENDING,
+                completedAt = null
+            )
+            repository.update(updatedTask)
+                .onSuccess {
+                    // 刷新前置依赖列表以更新依赖状态
+                    val currentId = _uiState.value.id
+                    if (currentId > 0) {
+                        loadTask(currentId)
+                    }
+                }
+        }
     }
 
     /**
@@ -364,10 +638,18 @@ class TaskEditViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun onDialogConfirmRelated(newIds: List<Long>) {
-        _uiState.value = _uiState.value.copy(
-            relatedIds = newIds,
-            showRelatedDialog = false
-        )
+        viewModelScope.launch {
+            val newTasks = getTasksByIds(newIds).sortedByPriority()
+            // 过滤相关任务：排除已在前置依赖中的
+            val predecessorIdsSet = _uiState.value.predecessorIds.toSet()
+            val filteredRelatedTasks = newTasks.filter { it.id !in predecessorIdsSet }
+            _uiState.value = _uiState.value.copy(
+                relatedIds = newIds,
+                relatedTasks = newTasks,
+                filteredRelatedTasks = filteredRelatedTasks,
+                showRelatedDialog = false
+            )
+        }
     }
 
     // 分类相关方法

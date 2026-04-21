@@ -181,15 +181,18 @@ class BiometricAuthManager(applicationContext: Context) {
             }
         )
 
-        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+        val promptInfoBuilder = BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
             .setSubtitle(subtitle)
-            .setNegativeButtonText(negativeButtonText)
             .setAllowedAuthenticators(
                 BiometricManager.Authenticators.BIOMETRIC_STRONG or
                 BiometricManager.Authenticators.DEVICE_CREDENTIAL
             )
-            .build()
+
+        // 当允许 DEVICE_CREDENTIAL 时，不能设置 NegativeButtonText
+        // 系统会自动显示"使用设备凭据"选项
+
+        val promptInfo = promptInfoBuilder.build()
 
         biometricPrompt.authenticate(promptInfo)
     }

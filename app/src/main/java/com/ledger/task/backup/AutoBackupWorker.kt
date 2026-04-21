@@ -12,9 +12,11 @@ import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.ledger.task.R
-import com.ledger.task.TaskLedgerApp
+import com.ledger.task.data.local.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -26,13 +28,15 @@ import java.time.format.DateTimeFormatter
 class AutoBackupWorker(
     context: Context,
     workerParams: WorkerParameters
-) : CoroutineWorker(context, workerParams) {
+) : CoroutineWorker(context, workerParams), KoinComponent {
 
     companion object {
         private const val TAG = "AutoBackupWorker"
         private const val NOTIFICATION_CHANNEL_ID = "auto_backup_channel"
         private const val NOTIFICATION_ID = 1001
     }
+
+    private val database: AppDatabase by inject()
 
     override suspend fun doWork(): Result {
         Log.i(TAG, "Starting auto backup doWork")
@@ -58,14 +62,12 @@ class AutoBackupWorker(
             val fileName = "自动备份_$timestamp.zip"
 
             // 关闭数据库连接
-            val app = context.applicationContext as TaskLedgerApp
-            app.database.close()
+            database.close()
 
             // 执行备份（保存到下载目录）
             val result = performBackupToDownloads(context, fileName, password)
 
-            // 重置数据库实例
-            app.resetDatabase()
+            // 数据库会在下次访问时自动重新初始化
 
             if (result) {
                 Log.i(TAG, "Auto backup completed: $fileName")
@@ -94,7 +96,6 @@ class AutoBackupWorker(
         password: String
     ): Boolean = withContext(Dispatchers.IO) {
         try {
-            val app = context.applicationContext as TaskLedgerApp
             val dbFile = context.getDatabasePath("task_ledger")
 
             if (!dbFile.exists()) {

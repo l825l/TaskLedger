@@ -18,13 +18,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ledger.task.ui.theme.BorderDim
+import com.ledger.task.ui.theme.getBorderDim
 import com.ledger.task.ui.theme.StatusDone
 import com.ledger.task.ui.theme.StatusOverdue
 import com.ledger.task.ui.theme.StatusProgress
-import com.ledger.task.ui.theme.SurfaceBackground
-import com.ledger.task.ui.theme.TextMuted
-import com.ledger.task.ui.theme.TextPrimary
+import com.ledger.task.ui.theme.getSurfaceBackground
+import com.ledger.task.ui.theme.getTextMuted
+import com.ledger.task.ui.theme.getTextPrimary
 import com.ledger.task.viewmodel.StatsState
 
 /**
@@ -38,15 +38,15 @@ fun StatsBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .border(1.dp, BorderDim, RoundedCornerShape(6.dp))
-            .background(SurfaceBackground, RoundedCornerShape(6.dp))
+            .border(1.dp, getBorderDim(), RoundedCornerShape(6.dp))
+            .background(getSurfaceBackground(), RoundedCornerShape(6.dp))
             .padding(2.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         StatItem(
             value = stats.total,
             label = "全部",
-            valueColor = TextPrimary,
+            valueColor = getTextPrimary(),
             modifier = Modifier.weight(1f)
         )
         StatItem(
@@ -79,7 +79,7 @@ private fun StatItem(
 ) {
     Row(
         modifier = modifier
-            .background(SurfaceBackground, RoundedCornerShape(4.dp))
+            .background(getSurfaceBackground(), RoundedCornerShape(4.dp))
             .padding(vertical = 14.dp, horizontal = 12.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
@@ -93,7 +93,7 @@ private fun StatItem(
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = label,
-            color = TextMuted,
+            color = getTextMuted(),
             fontSize = 12.sp
         )
     }

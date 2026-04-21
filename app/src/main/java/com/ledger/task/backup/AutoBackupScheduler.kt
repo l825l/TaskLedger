@@ -159,12 +159,21 @@ object AutoBackupScheduler {
     }
 
     /**
-     * 获取下次备份时间描述
+     * 获取下次备份时间描述（显示具体日期时间）
      */
     fun getNextBackupDescription(context: Context): String {
         val settings = getSettings(context)
         if (!settings.enabled) return "未启用"
 
+        val nextBackup = calculateNextBackupTime(settings)
+        val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+        return nextBackup.format(formatter)
+    }
+
+    /**
+     * 计算下次备份时间
+     */
+    fun calculateNextBackupTime(settings: AutoBackupSettings): LocalDateTime {
         val now = LocalDateTime.now()
         val backupTime = LocalTime.of(settings.hour, settings.minute)
         var nextBackup = now.with(backupTime)
@@ -179,18 +188,7 @@ object AutoBackupScheduler {
             }
         }
 
-        val timeStr = String.format("%02d:%02d", settings.hour, settings.minute)
-        return when {
-            settings.frequency == BackupFrequency.WEEKLY -> {
-                "每周日 $timeStr"
-            }
-            nextBackup.dayOfYear == now.dayOfYear -> {
-                "今天 $timeStr"
-            }
-            else -> {
-                "每天 $timeStr"
-            }
-        }
+        return nextBackup
     }
 
     /**

@@ -43,14 +43,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.ledger.task.data.model.CategoryNode
-import com.ledger.task.data.model.CategoryTree
-import com.ledger.task.data.model.DefaultCategories
+import com.ledger.task.domain.model.CategoryNode
+import com.ledger.task.domain.model.CategoryTree
+import com.ledger.task.domain.model.DefaultCategories
 import com.ledger.task.ui.theme.Accent
-import com.ledger.task.ui.theme.DeepBackground
-import com.ledger.task.ui.theme.ElevatedBackground
-import com.ledger.task.ui.theme.TextMuted
-import com.ledger.task.ui.theme.TextPrimary
+import com.ledger.task.ui.theme.getDeepBackground
+import com.ledger.task.ui.theme.getElevatedBackground
+import com.ledger.task.ui.theme.getTextMuted
+import com.ledger.task.ui.theme.getTextPrimary
 import com.ledger.task.R as AppR
 
 /**
@@ -86,7 +86,7 @@ fun CategoryMultiSelect(
                 colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
                     selectedContainerColor = com.ledger.task.ui.theme.SurfaceBackground,
                     selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                    containerColor = DeepBackground,
+                    containerColor = getDeepBackground(),
                     labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
@@ -99,7 +99,7 @@ fun CategoryMultiSelect(
                 colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
                     selectedContainerColor = com.ledger.task.ui.theme.SurfaceBackground,
                     selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                    containerColor = DeepBackground,
+                    containerColor = getDeepBackground(),
                     labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
@@ -123,7 +123,7 @@ fun CategoryPicker(
     Column(modifier = modifier) {
         Text(
             text = context.getString(AppR.string.category),
-            color = TextMuted,
+            color = getTextMuted(),
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(bottom = 8.dp)
         )
@@ -302,7 +302,7 @@ fun CategoryNodeItem(
 
             Text(
                 text = node.name,
-                color = TextPrimary,
+                color = getTextPrimary(),
                 style = MaterialTheme.typography.bodyMedium
             )
         }

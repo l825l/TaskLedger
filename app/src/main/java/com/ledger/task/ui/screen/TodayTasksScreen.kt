@@ -33,15 +33,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.Task
-import com.ledger.task.data.model.TaskStatus
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.model.TaskStatus
 import com.ledger.task.ui.component.DraggableFloatingActionButton
 import com.ledger.task.ui.component.EmptyState
-import com.ledger.task.ui.theme.DeepBackground
 import com.ledger.task.ui.theme.StatusDone
-import com.ledger.task.ui.theme.SurfaceBackground
-import com.ledger.task.ui.theme.TextMuted
+import com.ledger.task.ui.theme.getDeepBackground
+import com.ledger.task.ui.theme.getSurfaceBackground
+import com.ledger.task.ui.theme.getTextMuted
 import com.ledger.task.viewmodel.TodayTasksViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -68,7 +68,7 @@ fun TodayTasksScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(DeepBackground)
+            .background(getDeepBackground())
     ) {
         Column(
             modifier = Modifier
@@ -99,7 +99,7 @@ fun TodayTasksScreen(
                     Text(
                         text = "${uiState.completedCount}/${uiState.totalCount}",
                         color = if (uiState.completedCount == uiState.totalCount && uiState.totalCount > 0)
-                            StatusDone else TextMuted,
+                            StatusDone else getTextMuted(),
                         style = MaterialTheme.typography.titleMedium,
                         fontFamily = FontFamily.Monospace
                     )
@@ -112,7 +112,7 @@ fun TodayTasksScreen(
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp)),
                     color = StatusDone,
-                    trackColor = SurfaceBackground
+                    trackColor = getSurfaceBackground()
                 )
             }
 
@@ -125,7 +125,7 @@ fun TodayTasksScreen(
                 ) {
                     Text(
                         text = "总计: 0",
-                        color = TextMuted,
+                        color = getTextMuted(),
                         style = MaterialTheme.typography.labelMedium,
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier
@@ -208,7 +208,7 @@ fun TodayTasksScreen(
                             item {
                                 Text(
                                     text = "待办 (${pendingTasks.size})",
-                                    color = TextMuted,
+                                    color = getTextMuted(),
                                     style = MaterialTheme.typography.labelMedium
                                 )
                             }
@@ -275,6 +275,7 @@ fun TodayTasksScreen(
                                     onUndoComplete = { viewModel.onTaskUndoComplete(task.id) },
                                     onPriorityUpgrade = { viewModel.onPriorityUpgrade(task.id) },
                                     onPriorityDowngrade = { viewModel.onPriorityDowngrade(task.id) },
+                                    onDelete = { viewModel.onTaskDelete(task.id) },
                                     isCurrentlySwiped = currentlySwipedTaskId == task.id,
                                     onSwipeStateChanged = { isSwiped ->
                                         if (isSwiped) {
@@ -318,6 +319,7 @@ fun TodayTasksScreen(
                                     onUndoComplete = { viewModel.onTaskUndoComplete(task.id) },
                                     onPriorityUpgrade = { },
                                     onPriorityDowngrade = { },
+                                    onDelete = { viewModel.onTaskDelete(task.id) },
                                     isCurrentlySwiped = currentlySwipedTaskId == task.id,
                                     onSwipeStateChanged = { isSwiped ->
                                         if (isSwiped) {
@@ -335,7 +337,7 @@ fun TodayTasksScreen(
 
                 Text(
                     text = "总计: ${uiState.tasks.size}",
-                    color = TextMuted,
+                    color = getTextMuted(),
                     style = MaterialTheme.typography.labelMedium,
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier

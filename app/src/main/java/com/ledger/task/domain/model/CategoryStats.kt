@@ -1,4 +1,4 @@
-package com.ledger.task.data.model
+package com.ledger.task.domain.model
 
 /**
  * 分类统计信息

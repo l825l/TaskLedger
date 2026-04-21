@@ -46,7 +46,7 @@ import com.ledger.task.ui.component.StatsBar
 import com.ledger.task.ui.component.TaskTable
 import com.ledger.task.ui.theme.Accent
 import com.ledger.task.ui.theme.AccentDim
-import com.ledger.task.ui.theme.DeepBackground
+import com.ledger.task.ui.theme.getDeepBackground
 import com.ledger.task.ui.util.CsvExporter
 import com.ledger.task.viewmodel.TaskListViewModel
 import com.ledger.task.R as AppR
@@ -65,7 +65,7 @@ fun TaskListScreen(
     val context = LocalContext.current
 
     Scaffold(
-        containerColor = DeepBackground,
+        containerColor = getDeepBackground(),
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNavigateToCreate,
@@ -85,7 +85,7 @@ fun TaskListScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(DeepBackground)
+                .background(getDeepBackground())
                 .padding(padding)
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)

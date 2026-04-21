@@ -1,4 +1,4 @@
-package com.ledger.task.data.model
+package com.ledger.task.domain.model
 
 /**
  * 任务状态（OVERDUE 为运行时衍生，不存入数据库）

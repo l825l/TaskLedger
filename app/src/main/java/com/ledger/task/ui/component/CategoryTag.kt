@@ -17,9 +17,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ledger.task.data.model.CategoryNode
-import com.ledger.task.data.model.DefaultCategories
-import com.ledger.task.ui.theme.TextMuted
+import com.ledger.task.domain.model.CategoryNode
+import com.ledger.task.domain.model.DefaultCategories
+import com.ledger.task.ui.theme.getTextMuted
 
 /**
  * 分类标签组件
@@ -66,7 +66,7 @@ fun CategoryTag(
         // 文字
         Text(
             text = displayText,
-            color = TextMuted,
+            color = getTextMuted(),
             style = MaterialTheme.typography.labelSmall,
             fontSize = 10.sp,
             maxLines = 1

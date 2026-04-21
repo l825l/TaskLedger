@@ -18,12 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import com.ledger.task.data.model.DisplayStatus
-import com.ledger.task.data.model.Task
-import com.ledger.task.ui.theme.BorderDim
+import com.ledger.task.domain.model.DisplayStatus
+import com.ledger.task.domain.model.Task
+import com.ledger.task.ui.theme.getBorderDim
 import com.ledger.task.ui.theme.PriorityMid
-import com.ledger.task.ui.theme.TextMuted
-import com.ledger.task.ui.theme.TextSecondary
+import com.ledger.task.ui.theme.getTextMuted
+import com.ledger.task.ui.theme.getTextSecondary
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -55,7 +55,7 @@ fun TaskRow(
             // 序号
             Text(
                 text = String.format("%02d", index + 1),
-                color = TextMuted,
+                color = getTextMuted(),
                 style = MaterialTheme.typography.labelMedium,
                 fontFamily = FontFamily.Monospace,
                 modifier = Modifier.width(40.dp)
@@ -82,7 +82,7 @@ fun TaskRow(
                 color = when {
                     isOverdue -> MaterialTheme.colorScheme.error
                     isSoon -> PriorityMid
-                    else -> TextSecondary
+                    else -> getTextSecondary()
                 },
                 style = MaterialTheme.typography.bodySmall,
                 fontFamily = FontFamily.Monospace,
@@ -99,7 +99,7 @@ fun TaskRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(BorderDim, RoundedCornerShape(1.dp))
+                .background(getBorderDim(), RoundedCornerShape(1.dp))
         )
     }
 }

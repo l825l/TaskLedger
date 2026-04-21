@@ -33,9 +33,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.ledger.task.data.model.DisplayStatus
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.Task
+import com.ledger.task.domain.model.DisplayStatus
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.Task
 import com.ledger.task.ui.theme.DeepBackground
 import com.ledger.task.ui.theme.ElevatedBackground
 import com.ledger.task.ui.theme.PriorityHigh

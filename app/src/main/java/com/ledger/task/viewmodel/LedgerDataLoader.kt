@@ -3,10 +3,10 @@ package com.ledger.task.viewmodel
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.viewModelScope
-import com.ledger.task.TaskLedgerApp
-import com.ledger.task.data.model.LedgerFilterState
-import com.ledger.task.data.model.Task
-import com.ledger.task.data.model.TimeRange
+import com.ledger.task.domain.model.LedgerFilterState
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.model.TimeRange
+import com.ledger.task.domain.repository.TaskRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -23,13 +23,12 @@ import java.time.temporal.TemporalAdjusters
 class LedgerDataLoader(
     private val application: Application,
     private val getState: () -> LedgerCenterUiState,
-    private val updateState: (LedgerCenterUiState) -> Unit
+    private val updateState: (LedgerCenterUiState) -> Unit,
+    private val repository: TaskRepository
 ) {
     companion object {
         private const val TAG = "LedgerDataLoader"
     }
-
-    private val repository = (application as TaskLedgerApp).repository
 
     // Flow 收集任务
     private var loadLedgerJob: Job? = null

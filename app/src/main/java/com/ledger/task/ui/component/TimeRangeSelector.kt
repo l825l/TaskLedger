@@ -15,7 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.ExperimentalMaterial3Api
-import com.ledger.task.data.model.TimeRange
+import com.ledger.task.domain.model.TimeRange
 import com.ledger.task.ui.theme.DeepBackground
 import com.ledger.task.ui.theme.SurfaceBackground
 

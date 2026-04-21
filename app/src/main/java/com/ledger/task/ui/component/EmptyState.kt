@@ -12,7 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ledger.task.ui.theme.TextMuted
+import com.ledger.task.ui.theme.getTextMuted
 
 /**
  * 空状态
@@ -32,12 +32,12 @@ fun EmptyState(
         Text(
             text = "📋",
             style = MaterialTheme.typography.headlineLarge.copy(fontSize = 48.sp),
-            color = TextMuted.copy(alpha = 0.3f)
+            color = getTextMuted().copy(alpha = 0.3f)
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = text,
-            color = TextMuted,
+            color = getTextMuted(),
             style = MaterialTheme.typography.bodyMedium
         )
     }

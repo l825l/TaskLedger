@@ -53,6 +53,13 @@
 -dontwarn javax.annotation.**
 -keepnames class okhttp3.internal.publicsuffix.PublicSuffixDatabase
 
+# Error Prone annotations (used by Tink/crypto libraries)
+-dontwarn com.google.errorprone.annotations.**
+
+# Tink crypto library
+-dontwarn com.google.crypto.tink.**
+-keep class com.google.crypto.tink.** { *; }
+
 # Keep Gson
 -keep class com.google.gson.** { *; }
 -keep class * extends com.google.gson.TypeAdapter

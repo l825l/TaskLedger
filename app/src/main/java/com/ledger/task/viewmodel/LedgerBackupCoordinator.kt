@@ -61,28 +61,10 @@ class LedgerBackupCoordinator(
 
     /**
      * 请求创建备份（先检测密码）
+     * 返回 true 表示可以弹出保存对话框，返回 false 表示需要先设置密码
      */
-    fun requestCreateBackup() {
-        if (passwordStorage.isBiometricEnabled() && hasBackupPassword()) {
-            // 生物识别已启用，直接弹出保存对话框
-            updateState(getState().copy(needsShowBackupLauncher = true))
-        } else if (hasBackupPassword()) {
-            // 有密码但未启用生物识别，弹出保存对话框
-            updateState(getState().copy(needsShowBackupLauncher = true))
-        } else {
-            // 没有设置密码，跳转到生物识别设置
-            updateState(getState().copy(
-                showBiometricSetupDialog = true,
-                needsSetupPasswordForBackup = true
-            ))
-        }
-    }
-
-    /**
-     * 备份文件保存对话框已显示
-     */
-    fun onBackupLauncherShown() {
-        updateState(getState().copy(needsShowBackupLauncher = false))
+    fun requestCreateBackup(): Boolean {
+        return hasBackupPassword()
     }
 
     /**
@@ -97,9 +79,6 @@ class LedgerBackupCoordinator(
         // 如果生物识别已启用且有保存的密码，直接执行备份（无需验证）
         if (passwordStorage.isBiometricEnabled() && hasBackupPassword()) {
             performBackupDirectly(viewModelScope)
-        } else if (hasBackupPassword()) {
-            // 有密码但未启用生物识别，显示密码对话框
-            updateState(getState().copy(showBackupPasswordDialog = true))
         } else {
             // 不应该到达这里，因为已经在 requestCreateBackup 中处理了
             Log.e(TAG, "createBackup called without password")
@@ -112,65 +91,14 @@ class LedgerBackupCoordinator(
     private fun performBackupDirectly(viewModelScope: kotlinx.coroutines.CoroutineScope) {
         val uri = getState().pendingBackupUri ?: return
         val password = passwordStorage.getPassword() ?: return
+        val passwordHint = passwordStorage.getPasswordHint()
 
         viewModelScope.launch(Dispatchers.IO) {
             updateState(getState().copy(isBackingUp = true))
             try {
                 val context = application.applicationContext
-                val result = BackupManager.createBackup(context, uri, password, null)
-
-                withContext(Dispatchers.Main) {
-                    updateState(getState().copy(
-                        isBackingUp = false,
-                        pendingBackupUri = null,
-                        backupMessage = if (result.success) "备份成功" else "备份失败"
-                    ))
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e(TAG, "Backup failed", e)
-                withContext(Dispatchers.Main) {
-                    updateState(getState().copy(
-                        isBackingUp = false,
-                        pendingBackupUri = null,
-                        backupMessage = "备份失败: ${e.message}"
-                    ))
-                }
-            }
-        }
-    }
-
-    /**
-     * 生物识别设置完成后，显示备份保存对话框
-     */
-    fun performBackupAfterBiometricSetup() {
-        updateState(getState().copy(
-            needsSetupPasswordForBackup = false,
-            needsShowBackupLauncher = true
-        ))
-    }
-
-    /**
-     * 确认创建备份（带密码和密码提示）
-     */
-    fun confirmBackup(password: String?, passwordHint: String? = null, viewModelScope: kotlinx.coroutines.CoroutineScope) {
-        val uri = getState().pendingBackupUri ?: return
-        viewModelScope.launch(Dispatchers.IO) {
-            updateState(getState().copy(
-                isBackingUp = true,
-                showBackupPasswordDialog = false
-            ))
-            try {
-                val context = application.applicationContext
                 val result = BackupManager.createBackup(context, uri, password, passwordHint)
 
-                // 如果备份成功且设置了密码，保存密码用于自动备份和生物识别
-                if (result.success && password != null && password.length >= 6) {
-                    passwordStorage.savePassword(password)
-                    Log.i(TAG, "Saved backup password for auto backup and biometric")
-                }
-
                 withContext(Dispatchers.Main) {
                     updateState(getState().copy(
                         isBackingUp = false,
@@ -191,18 +119,6 @@ class LedgerBackupCoordinator(
                 }
             }
         }
-    }
-
-    /**
-     * 取消备份密码对话框
-     */
-    fun cancelBackupPasswordDialog() {
-        updateState(getState().copy(
-            showBackupPasswordDialog = false,
-            pendingBackupUri = null,
-            backupPasswordError = null,
-            needsBiometricForBackup = false
-        ))
     }
 
     /**
@@ -295,14 +211,17 @@ class LedgerBackupCoordinator(
      */
     fun confirmRestore(password: String?, viewModelScope: kotlinx.coroutines.CoroutineScope) {
         val uri = getState().pendingRestoreUri ?: return
-        updateState(getState().copy(showRestorePasswordDialog = false))
-        performRestore(uri, password, viewModelScope)
+        updateState(getState().copy(
+            showRestorePasswordDialog = false,
+            backupPasswordError = null
+        ))
+        performRestore(uri, password, viewModelScope, isRetry = false)
     }
 
     /**
      * 执行恢复
      */
-    private fun performRestore(uri: Uri, password: String?, viewModelScope: kotlinx.coroutines.CoroutineScope) {
+    private fun performRestore(uri: Uri, password: String?, viewModelScope: kotlinx.coroutines.CoroutineScope, isRetry: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             updateState(getState().copy(isRestoring = true))
             try {
@@ -317,6 +236,13 @@ class LedgerBackupCoordinator(
                     if (success) {
                         // 延迟重启应用
                         restartApp(context, viewModelScope)
+                    } else {
+                        // 恢复失败，重新显示密码对话框让用户重试
+                        updateState(getState().copy(
+                            pendingRestoreUri = uri,  // 保留 URI 以便重试
+                            showRestorePasswordDialog = true,
+                            backupPasswordError = "恢复失败，请检查密码后重试"
+                        ))
                     }
                 }
             } catch (e: CancellationException) {
@@ -324,10 +250,12 @@ class LedgerBackupCoordinator(
             } catch (e: Exception) {
                 Log.e(TAG, "Restore failed", e)
                 withContext(Dispatchers.Main) {
+                    // 恢复失败，重新显示密码对话框让用户重试
                     updateState(getState().copy(
                         isRestoring = false,
-                        pendingRestoreUri = null,
-                        backupMessage = "恢复失败: 密码错误"
+                        pendingRestoreUri = uri,  // 保留 URI 以便重试
+                        showRestorePasswordDialog = true,
+                        backupPasswordError = "密码错误，请重试"
                     ))
                 }
             }
@@ -437,19 +365,11 @@ class LedgerBackupCoordinator(
                     val success = passwordStorage.enableBiometricAccessWithCipher(password, authenticatedCipher)
                     Log.i(TAG, "enableBiometricAccessWithCipher result: $success")
 
-                    // 检查是否有待处理的备份
-                    val needsBackup = getState().needsSetupPasswordForBackup
-
                     updateState(getState().copy(
                         isBiometricEnabled = success,
                         showBiometricSetupDialog = false,
                         backupMessage = if (success) "已启用生物识别" else "启用生物识别失败"
                     ))
-
-                    // 如果是从备份跳转过来的，启用成功后执行备份
-                    if (success && needsBackup) {
-                        performBackupAfterBiometricSetup()
-                    }
                 } else {
                     Log.e(TAG, "Authenticated cipher is null")
                     updateState(getState().copy(

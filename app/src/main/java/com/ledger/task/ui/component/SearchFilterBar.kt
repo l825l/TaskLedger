@@ -24,17 +24,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ledger.task.data.model.Priority
+import com.ledger.task.domain.model.Priority
 import com.ledger.task.ui.theme.Accent
 import com.ledger.task.ui.theme.AccentDim
-import com.ledger.task.ui.theme.BorderDim
+import com.ledger.task.ui.theme.getBorderDim
 import com.ledger.task.ui.theme.PriorityHigh
 import com.ledger.task.ui.theme.PriorityLow
 import com.ledger.task.ui.theme.PriorityMid
-import com.ledger.task.ui.theme.SurfaceBackground
-import com.ledger.task.ui.theme.TextMuted
-import com.ledger.task.ui.theme.TextPrimary
-import com.ledger.task.ui.theme.TextSecondary
+import com.ledger.task.ui.theme.getSurfaceBackground
+import com.ledger.task.ui.theme.getTextMuted
+import com.ledger.task.ui.theme.getTextPrimary
+import com.ledger.task.ui.theme.getTextSecondary
 
 /**
  * 搜索和筛选栏
@@ -55,14 +55,14 @@ fun SearchFilterBar(
         Box(
             modifier = Modifier
                 .weight(1f)
-                .border(1.dp, BorderDim, RoundedCornerShape(6.dp))
-                .background(SurfaceBackground, RoundedCornerShape(6.dp))
+                .border(1.dp, getBorderDim(), RoundedCornerShape(6.dp))
+                .background(getSurfaceBackground(), RoundedCornerShape(6.dp))
         ) {
             TextField(
                 value = searchQuery,
                 onValueChange = onSearchChange,
                 placeholder = {
-                    Text("搜索任务标题...", color = TextMuted)
+                    Text("搜索任务标题...", color = getTextMuted())
                 },
                 leadingIcon = {
                     Text(
@@ -73,8 +73,8 @@ fun SearchFilterBar(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
+                    focusedTextColor = getTextPrimary(),
+                    unfocusedTextColor = getTextPrimary(),
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
                     cursorColor = Accent,
@@ -117,10 +117,10 @@ private fun FilterChip(
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(if (isActive) AccentDim else SurfaceBackground)
+            .background(if (isActive) AccentDim else getSurfaceBackground())
             .border(
                 1.dp,
-                if (isActive) Accent else BorderDim,
+                if (isActive) Accent else getBorderDim(),
                 RoundedCornerShape(6.dp)
             )
             .clickable { onClick() }
@@ -136,7 +136,7 @@ private fun FilterChip(
         )
         Text(
             text = label,
-            color = if (isActive) Accent else TextSecondary,
+            color = if (isActive) Accent else getTextSecondary(),
             fontSize = 13.sp
         )
     }

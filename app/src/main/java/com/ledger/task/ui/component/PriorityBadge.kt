@@ -15,7 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import com.ledger.task.data.model.Priority
+import com.ledger.task.domain.model.Priority
 
 /**
  * 优先级徽标

@@ -15,6 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.ledger.task.ui.theme.getElevatedBackground
+import com.ledger.task.ui.theme.getTextMuted
 
 /**
  * 底部导航栏
@@ -26,8 +28,8 @@ fun BottomNavigation(
     modifier: Modifier = Modifier
 ) {
     NavigationBar(
-        containerColor = com.ledger.task.ui.theme.ElevatedBackground,
-        contentColor = com.ledger.task.ui.theme.TextMuted,
+        containerColor = getElevatedBackground(),
+        contentColor = getTextMuted(),
         modifier = modifier
     ) {
         NavigationBarItem(

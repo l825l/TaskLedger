@@ -31,11 +31,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.ledger.task.data.model.DisplayStatus
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.QuickTag
-import com.ledger.task.data.model.Task
-import com.ledger.task.data.model.TaskStatus
+import com.ledger.task.domain.model.DisplayStatus
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.QuickTag
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.model.TaskStatus
 import com.ledger.task.ui.component.DraggableFloatingActionButton
 import com.ledger.task.ui.component.EmptyState
 import com.ledger.task.ui.component.MultiFilterBar
@@ -43,10 +43,10 @@ import com.ledger.task.ui.component.ActiveFiltersChip
 import com.ledger.task.ui.component.PriorityBadge
 import com.ledger.task.ui.component.StatusTag
 import com.ledger.task.ui.component.CategoryTag
-import com.ledger.task.ui.theme.DeepBackground
-import com.ledger.task.ui.theme.ElevatedBackground
-import com.ledger.task.ui.theme.SurfaceBackground
-import com.ledger.task.ui.theme.TextMuted
+import com.ledger.task.ui.theme.getDeepBackground
+import com.ledger.task.ui.theme.getElevatedBackground
+import com.ledger.task.ui.theme.getSurfaceBackground
+import com.ledger.task.ui.theme.getTextMuted
 import com.ledger.task.viewmodel.AllTasksViewModel
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -67,7 +67,7 @@ fun AllTasksScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(DeepBackground)
+            .background(getDeepBackground())
     ) {
         Column(
             modifier = Modifier
@@ -135,7 +135,7 @@ fun AllTasksScreen(
         ) {
             Text(
                 text = "总计: ${uiState.tasks.size}",
-                color = TextMuted,
+                color = getTextMuted(),
                 style = MaterialTheme.typography.labelMedium,
                 fontFamily = FontFamily.Monospace
             )
@@ -248,7 +248,7 @@ private fun TaskRow(
             ) {
                 Text(
                     text = String.format("%02d", index + 1),
-                    color = TextMuted,
+                    color = getTextMuted(),
                     style = MaterialTheme.typography.labelMedium,
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier.width(32.dp)
@@ -333,7 +333,7 @@ private fun TaskRow(
                     }
                     Text(
                         text = remainingText,
-                        color = TextMuted,
+                        color = getTextMuted(),
                         style = MaterialTheme.typography.labelSmall,
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier.weight(1f)

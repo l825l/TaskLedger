@@ -22,6 +22,7 @@ class BackupPasswordStorage(applicationContext: Context) {
         private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
         private const val KEY_BIOMETRIC_CIPHER_IV = "biometric_cipher_iv"
         private const val KEY_BIOMETRIC_ENCRYPTED_PASSWORD = "biometric_encrypted_password"
+        private const val KEY_PASSWORD_HINT = "password_hint"
     }
 
     private val biometricAuthManager = BiometricAuthManager(context)
@@ -179,6 +180,31 @@ class BackupPasswordStorage(applicationContext: Context) {
             biometricAuthManager.hasBiometricKey()
         } catch (e: Exception) {
             false
+        }
+    }
+
+    /**
+     * 保存密码提示
+     */
+    fun savePasswordHint(hint: String): Boolean {
+        return try {
+            encryptedPrefs.edit()
+                .putString(KEY_PASSWORD_HINT, hint)
+                .commit()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save password hint: ${e.message}")
+            false
+        }
+    }
+
+    /**
+     * 获取密码提示
+     */
+    fun getPasswordHint(): String? {
+        return try {
+            encryptedPrefs.getString(KEY_PASSWORD_HINT, null)
+        } catch (e: Exception) {
+            null
         }
     }
 

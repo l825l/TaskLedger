@@ -5,7 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
-import com.ledger.task.data.model.Priority
+import com.ledger.task.domain.model.Priority
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -131,4 +131,8 @@ interface TaskDao {
     // 根据 ID 列表获取任务（用于关联任务查询）
     @Query("SELECT * FROM tasks WHERE id IN (:ids)")
     fun getTasksByIds(ids: List<Long>): Flow<List<TaskEntity>>
+
+    // 清空所有任务
+    @Query("DELETE FROM tasks")
+    suspend fun deleteAll()
 }

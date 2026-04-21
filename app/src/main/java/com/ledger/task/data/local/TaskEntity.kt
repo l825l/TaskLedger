@@ -2,11 +2,14 @@ package com.ledger.task.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.ledger.task.data.model.DisplayStatus
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.RichContent
-import com.ledger.task.data.model.TaskStatus
-import java.time.LocalDate
+import com.ledger.task.domain.model.DisplayStatus
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.Recurrence
+import com.ledger.task.domain.model.RecurrenceType
+import com.ledger.task.domain.model.RichContent
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.model.TaskStatus
+import java.time.DayOfWeek
 import java.time.LocalDateTime
 
 /**
@@ -28,7 +31,11 @@ data class TaskEntity(
     val richContent: String = "",     // 富文本内容（序列化存储）
     val sortOrder: Int = 0,           // 排序顺序（今日待办专用）
     val createdAt: Long = System.currentTimeMillis(),
-    val completedAt: Long? = null     // 完成时间（毫秒时间戳）
+    val completedAt: Long? = null,    // 完成时间（毫秒时间戳）
+    // 循环任务字段
+    val recurrence: String? = null,   // 循环规则（JSON序列化）
+    val isRecurringInstance: Boolean = false,
+    val parentRecurringId: Long? = null
 ) {
     /**
      * 计算显示状态（运行时衍生值）
@@ -51,9 +58,43 @@ data class TaskEntity(
 }
 
 /**
+ * 序列化 Recurrence 为字符串
+ */
+fun Recurrence?.serializeToString(): String? {
+    if (this == null) return null
+    val daysStr = daysOfWeek?.joinToString(",") { it.name } ?: ""
+    val endStr = endDate?.toString() ?: ""
+    return "${type.name}|$interval|$endStr|$daysStr|${count ?: ""}"
+}
+
+/**
+ * 从字符串反序列化 Recurrence
+ */
+fun String?.deserializeToRecurrence(): Recurrence? {
+    if (this.isNullOrBlank()) return null
+    val parts = this.split("|")
+    if (parts.size < 5) return null
+    return try {
+        Recurrence(
+            type = RecurrenceType.valueOf(parts[0]),
+            interval = parts[1].toIntOrNull() ?: 1,
+            endDate = if (parts[2].isNotBlank()) LocalDateTime.parse(parts[2]) else null,
+            daysOfWeek = if (parts[3].isNotBlank()) {
+                parts[3].split(",").mapNotNull {
+                    try { DayOfWeek.valueOf(it) } catch (e: Exception) { null }
+                }.toSet().takeIf { it.isNotEmpty() }
+            } else null,
+            count = parts[4].toIntOrNull()
+        )
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/**
  * 将 TaskEntity 转换为 Task（Domain Model）
  */
-fun TaskEntity.toDomain(): com.ledger.task.data.model.Task = com.ledger.task.data.model.Task(
+fun TaskEntity.toDomain(): Task = Task(
     id = id,
     title = title,
     priority = priority,
@@ -63,18 +104,21 @@ fun TaskEntity.toDomain(): com.ledger.task.data.model.Task = com.ledger.task.dat
     description = description,
     category = category,
     hasImage = hasImage,
-    richContent = com.ledger.task.data.model.RichContent.deserialize(richContent),
+    richContent = RichContent.deserialize(richContent),
     predecessorIds = parseIdList(predecessorIds),
     relatedIds = parseIdList(relatedIds),
     sortOrder = sortOrder,
     createdAt = createdAt,
-    completedAt = completedAt
+    completedAt = completedAt,
+    recurrence = recurrence.deserializeToRecurrence(),
+    isRecurringInstance = isRecurringInstance,
+    parentRecurringId = parentRecurringId
 )
 
 /**
  * 将 Task（Domain Model）转换为 TaskEntity
  */
-fun com.ledger.task.data.model.Task.toEntity(): TaskEntity = TaskEntity(
+fun Task.toEntity(): TaskEntity = TaskEntity(
     id = id,
     title = title,
     priority = priority,
@@ -88,5 +132,8 @@ fun com.ledger.task.data.model.Task.toEntity(): TaskEntity = TaskEntity(
     relatedIds = formatIdList(relatedIds),
     sortOrder = sortOrder,
     createdAt = createdAt,
-    completedAt = completedAt
+    completedAt = completedAt,
+    recurrence = recurrence.serializeToString(),
+    isRecurringInstance = isRecurringInstance,
+    parentRecurringId = parentRecurringId
 )

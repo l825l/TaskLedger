@@ -5,19 +5,24 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.TaskStatus
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.TaskStatus
 import java.time.LocalDate
 import java.time.LocalDateTime
 
 /**
  * Room 数据库
- * 版本 6：启用 SQLCipher 加密
+ * 版本 8：添加子任务表
  */
-@Database(entities = [TaskEntity::class], version = 6, exportSchema = false)
+@Database(
+    entities = [TaskEntity::class, SubTaskEntity::class],
+    version = 8,
+    exportSchema = false
+)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
+    abstract fun subTaskDao(): SubTaskDao
 }
 
 /**
@@ -37,6 +42,36 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
     override fun migrate(db: SupportSQLiteDatabase) {
         // 加密迁移由 SQLCipher 自动处理
         // 此处无需额外操作，数据库已通过加密密钥打开
+    }
+}
+
+/**
+ * 数据库迁移：版本 6 -> 7，添加循环任务字段
+ */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE tasks ADD COLUMN recurrence TEXT")
+        db.execSQL("ALTER TABLE tasks ADD COLUMN isRecurringInstance INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE tasks ADD COLUMN parentRecurringId INTEGER")
+    }
+}
+
+/**
+ * 数据库迁移：版本 7 -> 8，添加子任务表
+ */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS sub_tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                parentId INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                isCompleted INTEGER NOT NULL DEFAULT 0,
+                sortOrder INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY (parentId) REFERENCES tasks(id) ON DELETE CASCADE
+            )
+        """)
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_sub_tasks_parentId ON sub_tasks (parentId)")
     }
 }
 

@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Backup
@@ -65,14 +66,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ledger.task.backup.AutoBackupScheduler
-import com.ledger.task.data.model.Task
-import com.ledger.task.data.model.TaskStatus
-import com.ledger.task.data.model.TimeRange
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.model.TaskStatus
+import com.ledger.task.domain.model.TimeRange
 import com.ledger.task.ui.component.DraggableFloatingActionButton
-import com.ledger.task.ui.theme.DeepBackground
-import com.ledger.task.ui.theme.ElevatedBackground
-import com.ledger.task.ui.theme.SurfaceBackground
-import com.ledger.task.ui.theme.TextMuted
+import com.ledger.task.ui.theme.getDeepBackground
+import com.ledger.task.ui.theme.getElevatedBackground
+import com.ledger.task.ui.theme.getSurfaceBackground
+import com.ledger.task.ui.theme.getTextMuted
 import com.ledger.task.viewmodel.ExportFileInfo
 import com.ledger.task.viewmodel.LedgerCenterViewModel
 import java.time.Instant
@@ -88,6 +89,8 @@ import java.time.format.DateTimeFormatter
 fun LedgerCenterScreen(
     viewModel: LedgerCenterViewModel,
     onNavigateToAdd: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToSettingsForBiometric: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -121,17 +124,6 @@ fun LedgerCenterScreen(
         uri?.let { viewModel.restoreFromBackup(it) }
     }
 
-    // 检测需要显示备份保存对话框
-    LaunchedEffect(uiState.needsShowBackupLauncher) {
-        if (uiState.needsShowBackupLauncher) {
-            viewModel.onBackupLauncherShown()
-            val timestamp = java.time.LocalDateTime.now().format(
-                java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
-            )
-            backupLauncher.launch("任务台账备份_$timestamp.zip")
-        }
-    }
-
     // 显示备份消息
     LaunchedEffect(uiState.backupMessage) {
         uiState.backupMessage?.let { message ->
@@ -143,7 +135,7 @@ fun LedgerCenterScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(DeepBackground)
+            .background(getDeepBackground())
     ) {
         Column(
             modifier = Modifier
@@ -152,12 +144,25 @@ fun LedgerCenterScreen(
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 标题
-            Text(
-                text = "台账中心",
-                color = MaterialTheme.colorScheme.onBackground,
-                style = MaterialTheme.typography.headlineLarge
-            )
+            // 标题行
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "台账中心",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.headlineLarge
+                )
+                IconButton(onClick = onNavigateToSettings) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "设置",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
 
             // 时间范围选择
             TimeRangeSelectorSection(
@@ -211,18 +216,21 @@ fun LedgerCenterScreen(
             BackupRestoreSection(
                 isBackingUp = uiState.isBackingUp,
                 isRestoring = uiState.isRestoring,
-                isBiometricAvailable = uiState.isBiometricAvailable,
-                isBiometricEnabled = uiState.isBiometricEnabled,
-                autoBackupEnabled = uiState.autoBackupEnabled,
-                autoBackupNextTime = uiState.autoBackupNextTime,
                 onBackup = {
-                    viewModel.requestCreateBackup()
+                    // 没有备份密码时显示确认对话框
+                    if (!viewModel.hasBackupPassword()) {
+                        viewModel.showNoPasswordConfirmDialog()
+                    } else {
+                        // 有密码，直接弹出保存对话框
+                        val timestamp = java.time.LocalDateTime.now().format(
+                            java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
+                        )
+                        backupLauncher.launch("任务台账备份_$timestamp.zip")
+                    }
                 },
                 onRestore = {
                     restoreLauncher.launch(arrayOf("application/zip", "*/*"))
                 },
-                onBiometricSettings = { viewModel.showBiometricSetupDialog() },
-                onAutoBackupSettings = { viewModel.showAutoBackupSettingsDialog() },
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -236,6 +244,28 @@ fun LedgerCenterScreen(
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+
+    // 没有备份密码的确认对话框
+    if (uiState.showNoPasswordConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissNoPasswordConfirmDialog() },
+            title = { Text("需要设置备份密码") },
+            text = { Text("创建备份需要先设置备份密码。是否前往设置页面开启生物识别？") },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.dismissNoPasswordConfirmDialog()
+                    onNavigateToSettingsForBiometric()
+                }) {
+                    Text("前往设置")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissNoPasswordConfirmDialog() }) {
+                    Text("取消")
+                }
+            }
         )
     }
 
@@ -486,19 +516,6 @@ fun LedgerCenterScreen(
         )
     }
 
-    // 备份密码对话框
-    if (uiState.showBackupPasswordDialog) {
-        BackupPasswordDialog(
-            onDismiss = viewModel::cancelBackupPasswordDialog,
-            onConfirm = { password, hint ->
-                viewModel.confirmBackup(password, hint)
-            },
-            title = "设置备份密码",
-            description = "为保护备份数据安全，建议设置备份密码（至少6位）。不设置密码则备份文件安全性较低。",
-            isOptional = true
-        )
-    }
-
     // 恢复密码对话框
     if (uiState.showRestorePasswordDialog) {
         RestorePasswordDialog(
@@ -507,49 +524,8 @@ fun LedgerCenterScreen(
                 viewModel.confirmRestore(password)
             },
             title = "输入备份密码",
-            passwordHint = uiState.passwordHint
-        )
-    }
-
-    // 生物识别设置对话框
-    if (uiState.showBiometricSetupDialog) {
-        val context = androidx.compose.ui.platform.LocalContext.current
-        val activity = context as? androidx.fragment.app.FragmentActivity
-
-        android.util.Log.i("LedgerCenterScreen", "BiometricSetupDialog: activity = $activity")
-
-        BiometricSetupDialog(
-            isBiometricEnabled = uiState.isBiometricEnabled,
-            onEnable = { password ->
-                android.util.Log.i("LedgerCenterScreen", "onEnable called, activity=$activity, password length=${password.length}")
-                if (activity != null) {
-                    viewModel.enableBiometricAccess(activity, password)
-                } else {
-                    android.util.Log.e("LedgerCenterScreen", "Activity is null!")
-                }
-            },
-            onDisable = {
-                viewModel.requestDisableBiometricAccess()
-            },
-            onDismiss = viewModel::dismissBiometricSetupDialog,
-            hasBackupPassword = viewModel.hasBackupPassword(),
-            needsSetupPassword = uiState.needsSetupPasswordForBackup
-        )
-    }
-
-    // 自动备份设置对话框
-    if (uiState.showAutoBackupSettingsDialog) {
-        AutoBackupSettingsDialog(
-            currentEnabled = uiState.autoBackupEnabled,
-            currentFrequency = uiState.autoBackupFrequency,
-            currentHour = uiState.autoBackupHour,
-            currentMinute = uiState.autoBackupMinute,
-            hasBackupPassword = viewModel.hasBackupPassword(),
-            backupFiles = viewModel.getAutoBackupFiles(),
-            onSave = { enabled, frequency, hour, minute ->
-                viewModel.saveAutoBackupSettings(enabled, frequency, hour, minute)
-            },
-            onDismiss = viewModel::dismissAutoBackupSettingsDialog
+            passwordHint = uiState.passwordHint,
+            error = uiState.backupPasswordError
         )
     }
 }
@@ -571,7 +547,7 @@ private fun TimeRangeSelectorSection(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceBackground)
+        colors = CardDefaults.cardColors(containerColor = getSurfaceBackground())
     ) {
         Column(
             modifier = Modifier
@@ -594,7 +570,7 @@ private fun TimeRangeSelectorSection(
                     selected = selectedRange == TimeRange.THIS_WEEK,
                     onClick = { onRangeChange(TimeRange.THIS_WEEK) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = ElevatedBackground,
+                        selectedContainerColor = getElevatedBackground(),
                         selectedLabelColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
@@ -603,7 +579,7 @@ private fun TimeRangeSelectorSection(
                     selected = selectedRange == TimeRange.THIS_MONTH,
                     onClick = { onRangeChange(TimeRange.THIS_MONTH) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = ElevatedBackground,
+                        selectedContainerColor = getElevatedBackground(),
                         selectedLabelColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
@@ -612,7 +588,7 @@ private fun TimeRangeSelectorSection(
                     selected = selectedRange == TimeRange.CUSTOM,
                     onClick = { onRangeChange(TimeRange.CUSTOM) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = ElevatedBackground,
+                        selectedContainerColor = getElevatedBackground(),
                         selectedLabelColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
@@ -636,7 +612,7 @@ private fun TimeRangeSelectorSection(
                         },
                         modifier = Modifier.weight(1f)
                     )
-                    Text("至", color = TextMuted)
+                    Text("至", color = getTextMuted())
                     OutlinedTextField(
                         value = customEndDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
                         onValueChange = {},
@@ -670,7 +646,7 @@ private fun CategoryFilterSection(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceBackground)
+        colors = CardDefaults.cardColors(containerColor = getSurfaceBackground())
     ) {
         Column(
             modifier = Modifier
@@ -703,7 +679,7 @@ private fun CategoryFilterSection(
             if (categories.isEmpty()) {
                 Text(
                     text = "暂无分类",
-                    color = TextMuted,
+                    color = getTextMuted(),
                     style = MaterialTheme.typography.bodySmall
                 )
             } else {
@@ -750,7 +726,7 @@ private fun TaskStatisticsSection(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceBackground)
+        colors = CardDefaults.cardColors(containerColor = getSurfaceBackground())
     ) {
         Column(
             modifier = Modifier
@@ -786,7 +762,7 @@ private fun StatItem(label: String, value: String) {
         )
         Text(
             text = label,
-            color = TextMuted,
+            color = getTextMuted(),
             style = MaterialTheme.typography.labelSmall
         )
     }
@@ -805,7 +781,7 @@ private fun ExportSection(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceBackground)
+        colors = CardDefaults.cardColors(containerColor = getSurfaceBackground())
     ) {
         Column(
             modifier = Modifier
@@ -832,7 +808,7 @@ private fun ExportSection(
                     )
                     Text(
                         text = "当前筛选条件下没有数据可导出",
-                        color = TextMuted,
+                        color = getTextMuted(),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -878,7 +854,7 @@ private fun ExportDialog(
                 // 导出格式
                 Text(
                     text = "选择导出格式",
-                    color = TextMuted,
+                    color = getTextMuted(),
                     style = MaterialTheme.typography.labelSmall
                 )
 
@@ -966,7 +942,7 @@ private fun ShareDialog(
             ) {
                 Text(
                     text = "导出新文件并分享",
-                    color = TextMuted,
+                    color = getTextMuted(),
                     style = MaterialTheme.typography.labelSmall
                 )
 
@@ -995,13 +971,13 @@ private fun ShareDialog(
                 ) {
                     Text(
                         text = "历史导出文件",
-                        color = TextMuted,
+                        color = getTextMuted(),
                         style = MaterialTheme.typography.labelSmall
                     )
                     if (exportHistory.isNotEmpty() && totalPages > 1) {
                         Text(
                             text = "${currentPage + 1}/$totalPages",
-                            color = TextMuted,
+                            color = getTextMuted(),
                             style = MaterialTheme.typography.labelSmall
                         )
                     }
@@ -1017,12 +993,12 @@ private fun ShareDialog(
                     ) {
                         Text(
                             text = "暂无历史导出文件",
-                            color = TextMuted,
+                            color = getTextMuted(),
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
                             text = "导出新文件后将显示在这里",
-                            color = TextMuted,
+                            color = getTextMuted(),
                             style = MaterialTheme.typography.labelSmall
                         )
                     }
@@ -1092,20 +1068,14 @@ private fun ShareDialog(
 private fun BackupRestoreSection(
     isBackingUp: Boolean,
     isRestoring: Boolean,
-    isBiometricAvailable: Boolean,
-    isBiometricEnabled: Boolean,
-    autoBackupEnabled: Boolean,
-    autoBackupNextTime: String,
     onBackup: () -> Unit,
     onRestore: () -> Unit,
-    onBiometricSettings: () -> Unit,
-    onAutoBackupSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceBackground)
+        colors = CardDefaults.cardColors(containerColor = getSurfaceBackground())
     ) {
         Column(
             modifier = Modifier
@@ -1121,7 +1091,7 @@ private fun BackupRestoreSection(
 
             Text(
                 text = "备份将保存所有任务数据，可随时恢复",
-                color = TextMuted,
+                color = getTextMuted(),
                 style = MaterialTheme.typography.bodySmall
             )
 
@@ -1162,202 +1132,8 @@ private fun BackupRestoreSection(
 
             // 分隔线
             Spacer(modifier = Modifier.height(4.dp))
-
-            // 生物识别设置
-            if (isBiometricAvailable) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onBiometricSettings() }
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Fingerprint,
-                            contentDescription = null,
-                            tint = if (isBiometricEnabled) MaterialTheme.colorScheme.primary else TextMuted
-                        )
-                        Column {
-                            Text(
-                                text = "生物识别快捷访问",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Text(
-                                text = if (isBiometricEnabled) "已启用" else "未启用",
-                                color = TextMuted,
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-                    }
-                    Switch(
-                        checked = isBiometricEnabled,
-                        onCheckedChange = { onBiometricSettings() }
-                    )
-                }
-            }
-
-            // 自动备份设置
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onAutoBackupSettings() }
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Schedule,
-                        contentDescription = null,
-                        tint = if (autoBackupEnabled) MaterialTheme.colorScheme.primary else TextMuted
-                    )
-                    Column {
-                        Text(
-                            text = "自动备份",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = autoBackupNextTime,
-                            color = TextMuted,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
-                }
-                Icon(
-                    Icons.Default.DateRange,
-                    contentDescription = null,
-                    tint = TextMuted
-                )
-            }
         }
     }
-}
-
-/**
- * 备份密码对话框
- */
-@Composable
-private fun BackupPasswordDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (String?, String?) -> Unit,  // password, hint
-    title: String,
-    description: String,
-    isOptional: Boolean
-) {
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var passwordHint by remember { mutableStateOf("") }
-    var showPassword by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = description,
-                    color = TextMuted,
-                    style = MaterialTheme.typography.bodySmall
-                )
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text(if (isOptional) "备份密码（可选）" else "备份密码") },
-                    singleLine = true,
-                    visualTransformation = if (showPassword)
-                        androidx.compose.ui.text.input.VisualTransformation.None
-                    else
-                        androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                    trailingIcon = {
-                        TextButton(onClick = { showPassword = !showPassword }) {
-                            Text(if (showPassword) "隐藏" else "显示")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                if (isOptional && password.isNotEmpty()) {
-                    OutlinedTextField(
-                        value = confirmPassword,
-                        onValueChange = { confirmPassword = it },
-                        label = { Text("确认密码") },
-                        singleLine = true,
-                        visualTransformation = if (showPassword)
-                            androidx.compose.ui.text.input.VisualTransformation.None
-                        else
-                            androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    if (password.isNotEmpty() && confirmPassword.isNotEmpty() && password != confirmPassword) {
-                        Text(
-                            text = "两次输入的密码不一致",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
-
-                    // 密码提示输入框
-                    OutlinedTextField(
-                        value = passwordHint,
-                        onValueChange = { passwordHint = it },
-                        label = { Text("密码提示（可选）") },
-                        singleLine = true,
-                        placeholder = { Text("例如：我的生日") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                if (password.isNotEmpty() && password.length < 6) {
-                    Text(
-                        text = "密码长度至少6位",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (isOptional) {
-                        if (password.isEmpty()) {
-                            onConfirm(null, null)
-                        } else if (password.length >= 6 && password == confirmPassword) {
-                            onConfirm(password, passwordHint.ifBlank { null })
-                        }
-                    } else {
-                        if (password.length >= 6) {
-                            onConfirm(password, null)
-                        }
-                    }
-                },
-                enabled = if (isOptional) {
-                    password.isEmpty() || (password.length >= 6 && password == confirmPassword)
-                } else {
-                    password.length >= 6
-                }
-            ) {
-                Text("确定")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
-    )
 }
 
 /**
@@ -1368,7 +1144,8 @@ private fun RestorePasswordDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
     title: String,
-    passwordHint: String?
+    passwordHint: String?,
+    error: String? = null
 ) {
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
@@ -1382,14 +1159,14 @@ private fun RestorePasswordDialog(
             ) {
                 Text(
                     text = "此备份文件已加密，请输入创建备份时设置的密码。",
-                    color = TextMuted,
+                    color = getTextMuted(),
                     style = MaterialTheme.typography.bodySmall
                 )
 
                 // 显示密码提示
                 if (!passwordHint.isNullOrBlank()) {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = ElevatedBackground)
+                        colors = CardDefaults.cardColors(containerColor = getElevatedBackground())
                     ) {
                         Row(
                             modifier = Modifier.padding(12.dp),
@@ -1415,6 +1192,7 @@ private fun RestorePasswordDialog(
                     onValueChange = { password = it },
                     label = { Text("备份密码") },
                     singleLine = true,
+                    isError = error != null,
                     visualTransformation = if (showPassword)
                         androidx.compose.ui.text.input.VisualTransformation.None
                     else
@@ -1427,7 +1205,14 @@ private fun RestorePasswordDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                if (password.isNotEmpty() && password.length < 6) {
+                // 显示错误信息
+                if (!error.isNullOrBlank()) {
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                } else if (password.isNotEmpty() && password.length < 6) {
                     Text(
                         text = "密码长度至少6位",
                         color = MaterialTheme.colorScheme.error,
@@ -1494,7 +1279,7 @@ private fun BiometricSetupDialog(
                     }
                     Text(
                         text = "您可以使用指纹或面容快速授权备份操作，无需输入密码。",
-                        color = TextMuted,
+                        color = getTextMuted(),
                         style = MaterialTheme.typography.bodySmall
                     )
                 } else if (!hasBackupPassword) {
@@ -1524,7 +1309,7 @@ private fun BiometricSetupDialog(
                     }
                     Text(
                         text = "设置密码后，将进行生物识别认证，认证成功后自动启用生物识别快捷访问。",
-                        color = TextMuted,
+                        color = getTextMuted(),
                         style = MaterialTheme.typography.bodySmall
                     )
                 } else if (showPasswordInput) {
@@ -1561,7 +1346,7 @@ private fun BiometricSetupDialog(
                         Icon(
                             Icons.Default.Fingerprint,
                             contentDescription = null,
-                            tint = TextMuted,
+                            tint = getTextMuted(),
                             modifier = Modifier.size(32.dp)
                         )
                         Text(
@@ -1571,7 +1356,7 @@ private fun BiometricSetupDialog(
                     }
                     Text(
                         text = "启用后，可以使用指纹或面容快速授权备份操作，无需每次输入密码。",
-                        color = TextMuted,
+                        color = getTextMuted(),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -1688,7 +1473,7 @@ private fun AutoBackupSettingsDialog(
                 // 密码提示
                 if (!hasBackupPassword) {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = ElevatedBackground)
+                        colors = CardDefaults.cardColors(containerColor = getElevatedBackground())
                     ) {
                         Row(
                             modifier = Modifier.padding(12.dp),
@@ -1760,7 +1545,7 @@ private fun AutoBackupSettingsDialog(
                     // 提示
                     Text(
                         text = "备份将在后台自动执行，备份文件保存在应用私有目录中。",
-                        color = TextMuted,
+                        color = getTextMuted(),
                         style = MaterialTheme.typography.labelSmall
                     )
 
@@ -1768,7 +1553,7 @@ private fun AutoBackupSettingsDialog(
                     if (backupFiles.isNotEmpty()) {
                         Text("已有备份文件", style = MaterialTheme.typography.labelMedium)
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = ElevatedBackground),
+                            colors = CardDefaults.cardColors(containerColor = getElevatedBackground()),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
@@ -1779,14 +1564,14 @@ private fun AutoBackupSettingsDialog(
                                     Text(
                                         text = fileName,
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = TextMuted
+                                        color = getTextMuted()
                                     )
                                 }
                                 if (backupFiles.size > 5) {
                                     Text(
                                         text = "还有 ${backupFiles.size - 5} 个文件...",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = TextMuted
+                                        color = getTextMuted()
                                     )
                                 }
                             }

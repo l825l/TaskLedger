@@ -3,13 +3,13 @@ package com.ledger.task.viewmodel
 import android.app.Application
 import android.net.Uri
 import android.util.Log
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ledger.task.TaskLedgerApp
 import com.ledger.task.backup.AutoBackupScheduler
-import com.ledger.task.data.model.LedgerFilterState
-import com.ledger.task.data.model.Task
-import com.ledger.task.data.model.TimeRange
+import com.ledger.task.domain.model.LedgerFilterState
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.model.TimeRange
+import com.ledger.task.domain.repository.TaskRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
@@ -42,8 +44,8 @@ data class LedgerCenterUiState(
     val isRestoring: Boolean = false,
     val backupMessage: String? = null,
     // 备份密码相关
-    val showBackupPasswordDialog: Boolean = false,
     val showRestorePasswordDialog: Boolean = false,
+    val showNoPasswordConfirmDialog: Boolean = false,  // 没有备份密码时的确认对话框
     val pendingBackupUri: Uri? = null,
     val pendingRestoreUri: Uri? = null,
     val backupPasswordError: String? = null,
@@ -55,11 +57,9 @@ data class LedgerCenterUiState(
     val showBiometricSetupDialog: Boolean = false,
     val needsBiometricForBackup: Boolean = false,
     val needsBiometricForRestore: Boolean = false,
-    val needsSetupPasswordForBackup: Boolean = false,
     val needsBiometricForDisable: Boolean = false,
     val biometricFailedCount: Int = 0,
     val showPasswordForDisable: Boolean = false,  // 关闭生物识别时显示密码输入
-    val needsShowBackupLauncher: Boolean = false, // 需要显示备份保存对话框
     val biometricTriggerId: Int = 0,  // 用于触发生物识别对话框重新显示
     // 自动备份相关
     val showAutoBackupSettingsDialog: Boolean = false,
@@ -75,13 +75,14 @@ data class LedgerCenterUiState(
  * 台账中心 ViewModel
  * 使用组合模式协调各功能模块
  */
-class LedgerCenterViewModel(application: Application) : AndroidViewModel(application) {
+class LedgerCenterViewModel(
+    private val application: Application,
+    private val repository: TaskRepository
+) : ViewModel(), KoinComponent {
 
     companion object {
         private const val TAG = "LedgerCenterViewModel"
     }
-
-    private val repository = (application as TaskLedgerApp).repository
 
     private val _uiState = MutableStateFlow(LedgerCenterUiState())
     val uiState: StateFlow<LedgerCenterUiState> = _uiState.asStateFlow()
@@ -95,14 +96,16 @@ class LedgerCenterViewModel(application: Application) : AndroidViewModel(applica
     private val dataLoader = LedgerDataLoader(
         application = application,
         getState = { _uiState.value },
-        updateState = ::updateState
+        updateState = ::updateState,
+        repository = repository
     )
 
     private val exportManager = LedgerExportManager(
         application = application,
         getState = { _uiState.value },
         updateState = ::updateState,
-        getRelatedTaskSummaries = ::getRelatedTaskSummaries
+        getRelatedTaskSummaries = ::getRelatedTaskSummaries,
+        repository = repository
     )
 
     private val backupCoordinator = LedgerBackupCoordinator(
@@ -260,28 +263,12 @@ class LedgerCenterViewModel(application: Application) : AndroidViewModel(applica
 
     // ==================== 备份/恢复相关 ====================
 
-    fun requestCreateBackup() {
-        backupCoordinator.requestCreateBackup()
-    }
-
-    fun onBackupLauncherShown() {
-        backupCoordinator.onBackupLauncherShown()
+    fun requestCreateBackup(): Boolean {
+        return backupCoordinator.requestCreateBackup()
     }
 
     fun createBackup(uri: Uri) {
         backupCoordinator.createBackup(uri, viewModelScope)
-    }
-
-    fun performBackupAfterBiometricSetup() {
-        backupCoordinator.performBackupAfterBiometricSetup()
-    }
-
-    fun confirmBackup(password: String?, passwordHint: String? = null) {
-        backupCoordinator.confirmBackup(password, passwordHint, viewModelScope)
-    }
-
-    fun cancelBackupPasswordDialog() {
-        backupCoordinator.cancelBackupPasswordDialog()
     }
 
     fun restoreFromBackup(uri: Uri) {
@@ -356,6 +343,24 @@ class LedgerCenterViewModel(application: Application) : AndroidViewModel(applica
 
     fun hasBackupPassword(): Boolean {
         return backupCoordinator.hasBackupPassword()
+    }
+
+    fun isBiometricEnabled(): Boolean {
+        return _uiState.value.isBiometricEnabled
+    }
+
+    /**
+     * 显示没有备份密码的确认对话框
+     */
+    fun showNoPasswordConfirmDialog() {
+        _uiState.value = _uiState.value.copy(showNoPasswordConfirmDialog = true)
+    }
+
+    /**
+     * 隐藏没有备份密码的确认对话框
+     */
+    fun dismissNoPasswordConfirmDialog() {
+        _uiState.value = _uiState.value.copy(showNoPasswordConfirmDialog = false)
     }
 
     // ==================== 自动备份相关 ====================

@@ -1,11 +1,11 @@
 package com.ledger.task.data.local
 
 import androidx.room.TypeConverter
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.QuickTag
-import com.ledger.task.data.model.RichContent
-import com.ledger.task.data.model.RichTextItem
-import com.ledger.task.data.model.TaskStatus
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.QuickTag
+import com.ledger.task.domain.model.RichContent
+import com.ledger.task.domain.model.RichTextItem
+import com.ledger.task.domain.model.TaskStatus
 import java.time.LocalDate
 import java.time.LocalDateTime
 

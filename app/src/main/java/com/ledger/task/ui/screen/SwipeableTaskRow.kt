@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -33,6 +34,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,19 +55,18 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.ledger.task.data.model.DisplayStatus
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.Task
-import com.ledger.task.data.model.TaskStatus
+import com.ledger.task.domain.model.DisplayStatus
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.model.TaskStatus
 import com.ledger.task.ui.component.CategoryTag
 import com.ledger.task.ui.component.PriorityBadge
 import com.ledger.task.ui.component.StatusTag
 import com.ledger.task.ui.theme.StatusDone
-import com.ledger.task.ui.theme.TextMuted
+import com.ledger.task.ui.theme.getTextMuted
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -95,6 +97,7 @@ fun SwipeableTaskRow(
     onUndoComplete: () -> Unit,
     onPriorityUpgrade: () -> Unit,
     onPriorityDowngrade: () -> Unit,
+    onDelete: () -> Unit = {},
     isCurrentlySwiped: Boolean = false,
     onSwipeStateChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
@@ -106,8 +109,11 @@ fun SwipeableTaskRow(
     var swipeOffset by remember { mutableFloatStateOf(0f) }
     var isSwiping by remember { mutableStateOf(false) }
 
+    // 删除确认对话框
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     // 滑动按钮宽度
-    val actionButtonWidth = with(density) { 120.dp.toPx() }
+    val actionButtonWidth = with(density) { 180.dp.toPx() }
 
     val formatter = DateTimeFormatter.ofPattern("HH:mm")
     val fullFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm")
@@ -158,7 +164,7 @@ fun SwipeableTaskRow(
             Row(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .width(120.dp)
+                    .width(180.dp)
                     .height(76.dp)
                     .clip(RoundedCornerShape(12.dp))
             ) {
@@ -217,33 +223,58 @@ fun SwipeableTaskRow(
                     }
                 }
 
-                // 取消按钮
+                // 删除按钮
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .background(Color(0xFF888888))
+                        .background(MaterialTheme.colorScheme.error)
                         .clickable {
-                            swipeOffset = 0f
-                            onSwipeStateChanged(false)
+                            showDeleteDialog = true
                         },
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "取消",
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "删除",
                             tint = Color.White,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            text = "取消",
+                            text = "删除",
                             color = Color.White,
                             style = MaterialTheme.typography.labelSmall
                         )
                     }
                 }
             }
+        }
+
+        // 删除确认对话框
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("确认删除") },
+                text = { Text("确定要删除任务「${task.title}」吗？此操作不可撤销。") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onDelete()
+                            showDeleteDialog = false
+                            swipeOffset = 0f
+                            onSwipeStateChanged(false)
+                        }
+                    ) {
+                        Text("删除", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("取消")
+                    }
+                }
+            )
         }
 
         // 右滑背景按钮（在卡片左侧显示）
@@ -475,23 +506,21 @@ fun SwipeableTaskRow(
                     Icon(
                         imageVector = Icons.Default.DragIndicator,
                         contentDescription = "拖拽排序",
-                        tint = TextMuted.copy(alpha = if (canDrag) 0.5f else 0.2f),
+                        tint = getTextMuted().copy(alpha = if (canDrag) 0.5f else 0.2f),
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = String.format("%02d", taskIndex + 1),
-                        color = TextMuted,
+                        color = getTextMuted(),
                         style = MaterialTheme.typography.labelMedium,
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier.width(28.dp)
                     )
                     Text(
                         text = task.title,
-                        color = if (isCompleted) TextMuted else MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            textDecoration = if (isCompleted) TextDecoration.LineThrough else null
-                        ),
+                        color = if (isCompleted) getTextMuted() else MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f)
                     )
                     PriorityBadge(priority = task.priority)
@@ -505,12 +534,10 @@ fun SwipeableTaskRow(
                 ) {
                     Text(
                         text = "截止: ${if (showFullDate) task.deadline.format(fullFormatter) else task.deadline.format(formatter)}",
-                        color = if (isCompleted) TextMuted.copy(alpha = 0.6f)
+                        color = if (isCompleted) getTextMuted().copy(alpha = 0.6f)
                                else if (isOverdue) MaterialTheme.colorScheme.error
                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            textDecoration = if (isCompleted) TextDecoration.LineThrough else null
-                        ),
+                        style = MaterialTheme.typography.labelSmall,
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier.weight(1f)
                     )
@@ -532,10 +559,8 @@ fun SwipeableTaskRow(
                         } ?: task.deadline // 默认使用截止时间
                         Text(
                             text = "完成: ${completedTime.format(fullFormatter)}",
-                            color = TextMuted.copy(alpha = 0.6f),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                textDecoration = TextDecoration.LineThrough
-                            ),
+                            color = getTextMuted().copy(alpha = 0.6f),
+                            style = MaterialTheme.typography.labelSmall,
                             fontFamily = FontFamily.Monospace,
                             modifier = Modifier.weight(1f)
                         )
@@ -578,7 +603,7 @@ fun SwipeableTaskRow(
                             }
                             Text(
                                 text = text,
-                                color = TextMuted,
+                                color = getTextMuted(),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontFamily = FontFamily.Monospace,
                                 modifier = Modifier.weight(1f)

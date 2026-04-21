@@ -1,13 +1,15 @@
 package com.ledger.task.data.repository
 
+import com.ledger.task.data.local.SubTaskDao
 import com.ledger.task.data.local.TaskDao
-import com.ledger.task.data.local.TaskEntity
 import com.ledger.task.data.local.parseIdList
 import com.ledger.task.data.local.toDomain
 import com.ledger.task.data.local.toEntity
-import com.ledger.task.data.model.AllTasksFilterState
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.Task
+import com.ledger.task.domain.model.AllTasksFilterState
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.SubTask
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.repository.TaskRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -15,7 +17,10 @@ import kotlinx.coroutines.flow.map
 /**
  * 任务仓库实现
  */
-class TaskRepositoryImpl(private val dao: TaskDao) : TaskRepository {
+class TaskRepositoryImpl(
+    private val dao: TaskDao,
+    private val subTaskDao: SubTaskDao
+) : TaskRepository {
 
     override fun getAll(): Flow<List<Task>> = dao.getAll().map { tasks ->
         tasks.map { it.toDomain() }
@@ -143,5 +148,29 @@ class TaskRepositoryImpl(private val dao: TaskDao) : TaskRepository {
 
     override suspend fun updateSortOrder(id: Long, sortOrder: Int) {
         dao.updateSortOrder(id, sortOrder)
+    }
+
+    // 子任务操作实现
+    override fun getSubTasks(parentId: Long): Flow<List<SubTask>> =
+        subTaskDao.getByParentId(parentId).map { entities ->
+            entities.map { it.toDomain() }
+        }
+
+    override suspend fun getSubTasksNow(parentId: Long): List<SubTask> =
+        subTaskDao.getByParentIdNow(parentId).map { it.toDomain() }
+
+    override suspend fun insertSubTask(subTask: SubTask): Long =
+        subTaskDao.insert(subTask.toEntity())
+
+    override suspend fun updateSubTask(subTask: SubTask) {
+        subTaskDao.update(subTask.toEntity())
+    }
+
+    override suspend fun deleteSubTask(id: Long) {
+        subTaskDao.delete(id)
+    }
+
+    override suspend fun deleteSubTasksByParentId(parentId: Long) {
+        subTaskDao.deleteByParentId(parentId)
     }
 }

@@ -1,12 +1,12 @@
 package com.ledger.task.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ledger.task.TaskLedgerApp
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.Task
-import com.ledger.task.data.model.TaskStatus
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.model.TaskStatus
+import com.ledger.task.domain.repository.TaskRepository
+import com.ledger.task.domain.usecase.CompleteTaskUseCase
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -25,9 +25,10 @@ data class PriorityTasksUiState(
 /**
  * 重点待办 ViewModel
  */
-class PriorityTasksViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val repository = (application as TaskLedgerApp).repository
+class PriorityTasksViewModel(
+    private val repository: TaskRepository,
+    private val completeTaskUseCase: CompleteTaskUseCase
+) : ViewModel() {
 
     // 直接将 Flow 转换为 StateFlow，避免中间 MutableStateFlow
     val uiState: StateFlow<PriorityTasksUiState> = run {
@@ -45,14 +46,7 @@ class PriorityTasksViewModel(application: Application) : AndroidViewModel(applic
 
     fun onTaskCompleted(taskId: Long) {
         viewModelScope.launch {
-            val task = repository.getById(taskId)
-            task?.let {
-                val updatedTask = it.copy(
-                    status = TaskStatus.DONE,
-                    completedAt = System.currentTimeMillis()
-                )
-                repository.update(updatedTask)
-            }
+            completeTaskUseCase(taskId)
         }
     }
 
@@ -85,6 +79,16 @@ class PriorityTasksViewModel(application: Application) : AndroidViewModel(applic
                 val updatedTask = it.copy(priority = updatedPriority)
                 repository.update(updatedTask)
             }
+        }
+    }
+
+    /**
+     * 删除任务
+     */
+    fun onTaskDelete(taskId: Long) {
+        viewModelScope.launch {
+            val task = repository.getById(taskId) ?: return@launch
+            repository.delete(task)
         }
     }
 }

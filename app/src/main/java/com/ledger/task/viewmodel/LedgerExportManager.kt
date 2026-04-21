@@ -7,8 +7,8 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
 import androidx.lifecycle.viewModelScope
-import com.ledger.task.TaskLedgerApp
-import com.ledger.task.data.model.Task
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.repository.TaskRepository
 import com.ledger.task.ui.util.LedgerExporter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +36,8 @@ class LedgerExportManager(
     private val application: Application,
     private val getState: () -> LedgerCenterUiState,
     private val updateState: (LedgerCenterUiState) -> Unit,
-    private val getRelatedTaskSummaries: suspend (List<Task>) -> Map<Long, String>
+    private val getRelatedTaskSummaries: suspend (List<Task>) -> Map<Long, String>,
+    private val repository: TaskRepository
 ) {
     companion object {
         private const val TAG = "LedgerExportManager"
@@ -45,7 +46,6 @@ class LedgerExportManager(
         private const val MAX_HISTORY = 50 // 每页5个，最多10页
     }
 
-    private val repository = (application as TaskLedgerApp).repository
     private val prefs = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     /**

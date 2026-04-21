@@ -1,13 +1,12 @@
 package com.ledger.task.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ledger.task.TaskLedgerApp
-import com.ledger.task.data.model.DisplayStatus
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.Task
-import com.ledger.task.data.model.TaskStatus
+import com.ledger.task.domain.model.DisplayStatus
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.model.TaskStatus
+import com.ledger.task.domain.repository.TaskRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -45,9 +44,9 @@ data class TaskListUiState(
     val stats: StatsState = StatsState()
 )
 
-class TaskListViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val repository = (application as TaskLedgerApp).repository
+class TaskListViewModel(
+    private val repository: TaskRepository
+) : ViewModel() {
 
     private val searchQueryFlow = MutableStateFlow("")
     private val priorityFilterFlow = MutableStateFlow<Priority?>(null)

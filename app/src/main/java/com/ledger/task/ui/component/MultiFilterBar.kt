@@ -37,15 +37,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.PopupProperties
 import androidx.compose.foundation.layout.size
-import com.ledger.task.data.model.DefaultCategories
-import com.ledger.task.data.model.DisplayStatus
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.QuickTag
-import com.ledger.task.ui.theme.BorderDim
-import com.ledger.task.ui.theme.DeepBackground
-import com.ledger.task.ui.theme.ElevatedBackground
-import com.ledger.task.ui.theme.SurfaceBackground
-import com.ledger.task.ui.theme.TextMuted
+import com.ledger.task.domain.model.DefaultCategories
+import com.ledger.task.domain.model.DisplayStatus
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.QuickTag
+import com.ledger.task.ui.theme.getBorderDim
+import com.ledger.task.ui.theme.getDeepBackground
+import com.ledger.task.ui.theme.getElevatedBackground
+import com.ledger.task.ui.theme.getSurfaceBackground
+import com.ledger.task.ui.theme.getTextMuted
 
 /**
  * 多维筛选器组件
@@ -148,7 +148,7 @@ private fun <T> FilterDropdown(
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
                 .clickable { expanded = true },
-            color = if (value != null) SurfaceBackground else DeepBackground,
+            color = if (value != null) getSurfaceBackground() else getDeepBackground(),
             shape = RoundedCornerShape(8.dp)
         ) {
             Row(
@@ -158,14 +158,14 @@ private fun <T> FilterDropdown(
             ) {
                 Text(
                     text = if (value != null) selectedLabel else label,
-                    color = if (value != null) MaterialTheme.colorScheme.onSurface else TextMuted,
+                    color = if (value != null) MaterialTheme.colorScheme.onSurface else getTextMuted(),
                     style = MaterialTheme.typography.labelMedium,
                     maxLines = 1
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
                     contentDescription = "展开",
-                    tint = if (value != null) MaterialTheme.colorScheme.onSurface else TextMuted,
+                    tint = if (value != null) MaterialTheme.colorScheme.onSurface else getTextMuted(),
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -176,7 +176,7 @@ private fun <T> FilterDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false },
             modifier = Modifier
-                .background(ElevatedBackground)
+                .background(getElevatedBackground())
                 .widthIn(min = 120.dp, max = 200.dp),
             properties = PopupProperties(focusable = true)
         ) {
@@ -194,7 +194,7 @@ private fun <T> FilterDropdown(
                         expanded = false
                     },
                     modifier = Modifier.background(
-                        if (optionValue == value) SurfaceBackground else ElevatedBackground
+                        if (optionValue == value) getSurfaceBackground() else getElevatedBackground()
                     )
                 )
             }
@@ -222,7 +222,7 @@ fun ActiveFiltersChip(
             modifier = modifier
                 .clip(RoundedCornerShape(16.dp))
                 .clickable { onClearAll() },
-            color = SurfaceBackground,
+            color = getSurfaceBackground(),
             shape = RoundedCornerShape(16.dp)
         ) {
             Row(

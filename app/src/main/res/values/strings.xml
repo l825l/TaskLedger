@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">牛马工作记账</string>
+    <string name="app_name">工作台账</string>
 
     <!-- UI 文本 -->
     <string name="task_ledger">任务台账</string>

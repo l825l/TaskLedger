@@ -1,4 +1,4 @@
-package com.ledger.task.data.model
+package com.ledger.task.domain.model
 
 import androidx.compose.ui.graphics.Color
 

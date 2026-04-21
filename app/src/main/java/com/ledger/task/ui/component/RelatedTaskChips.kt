@@ -27,19 +27,19 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.Task
-import com.ledger.task.data.model.TaskStatus
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.model.TaskStatus
 import com.ledger.task.ui.theme.Accent
-import com.ledger.task.ui.theme.BorderDim
-import com.ledger.task.ui.theme.DeepBackground
-import com.ledger.task.ui.theme.ElevatedBackground
+import com.ledger.task.ui.theme.getBorderDim
+import com.ledger.task.ui.theme.getDeepBackground
+import com.ledger.task.ui.theme.getElevatedBackground
 import com.ledger.task.ui.theme.PriorityHigh
 import com.ledger.task.ui.theme.PriorityLow
 import com.ledger.task.ui.theme.PriorityMid
-import com.ledger.task.ui.theme.SurfaceBackground
-import com.ledger.task.ui.theme.TextMuted
-import com.ledger.task.ui.theme.TextPrimary
+import com.ledger.task.ui.theme.getSurfaceBackground
+import com.ledger.task.ui.theme.getTextMuted
+import com.ledger.task.ui.theme.getTextPrimary
 import java.time.format.DateTimeFormatter
 
 /**
@@ -52,12 +52,12 @@ fun RelatedTaskChip(
     modifier: Modifier = Modifier
 ) {
     val formatter = DateTimeFormatter.ofPattern("MM.dd")
-    val isOverdue = task.displayStatus == com.ledger.task.data.model.DisplayStatus.OVERDUE
+    val isOverdue = task.displayStatus == com.ledger.task.domain.model.DisplayStatus.OVERDUE
 
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(SurfaceBackground)
+            .background(getSurfaceBackground())
             .shadow(
                 elevation = 2.dp,
                 shape = RoundedCornerShape(8.dp),
@@ -92,7 +92,7 @@ fun RelatedTaskChip(
             ) {
                 Text(
                     text = task.title,
-                    color = TextPrimary,
+                    color = getTextPrimary(),
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1
                 )
@@ -102,7 +102,7 @@ fun RelatedTaskChip(
                 ) {
                     Text(
                         text = "截止: ${task.deadline.format(formatter)}",
-                        color = if (isOverdue) PriorityHigh else TextMuted,
+                        color = if (isOverdue) PriorityHigh else getTextMuted(),
                         style = MaterialTheme.typography.labelSmall
                     )
                     StatusTag(displayStatus = task.displayStatus)
@@ -117,7 +117,7 @@ fun RelatedTaskChip(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "移除",
-                    tint = TextMuted
+                    tint = getTextMuted()
                 )
             }
         }
@@ -137,7 +137,7 @@ fun RelatedTasksContainer(
     Column(modifier = modifier) {
         Text(
             text = title,
-            color = TextMuted,
+            color = getTextMuted(),
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(bottom = 8.dp)
         )
@@ -148,13 +148,13 @@ fun RelatedTasksContainer(
                     .fillMaxWidth()
                     .height(48.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(DeepBackground)
+                    .background(getDeepBackground())
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "未选择关联任务",
-                    color = TextMuted,
+                    color = getTextMuted(),
                     style = MaterialTheme.typography.bodySmall
                 )
             }

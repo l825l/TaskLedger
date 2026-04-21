@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import com.ledger.task.data.model.DisplayStatus
+import com.ledger.task.domain.model.DisplayStatus
 import com.ledger.task.ui.theme.StatusDone
 import com.ledger.task.ui.theme.StatusDoneBg
 import com.ledger.task.ui.theme.StatusOverdue

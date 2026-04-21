@@ -1,13 +1,7 @@
-package com.ledger.task.data.model
+package com.ledger.task.domain.model
 
 import androidx.compose.ui.graphics.Color
-import java.time.LocalDate
 import java.time.LocalDateTime
-
-/**
- * 任务领域模型（Domain Model）
- * 用于在应用各层之间传递数据，不包含 Room 注解
- */
 
 /**
  * 快捷标签枚举
@@ -100,6 +94,9 @@ data class RichContent(
     }
 }
 
+/**
+ * 任务领域模型
+ */
 data class Task(
     val id: Long = 0,
     val title: String,
@@ -107,13 +104,17 @@ data class Task(
     val deadline: LocalDateTime,
     val status: TaskStatus,
     val displayStatus: DisplayStatus,
-    val description: String = "",  // 保留字符串字段用于简单场景
+    val description: String = "",
     val category: String = "",
     val hasImage: Boolean = false,
-    val richContent: RichContent = RichContent(emptyList()),  // 富文本备注
+    val richContent: RichContent = RichContent(emptyList()),
     val predecessorIds: List<Long> = emptyList(),  // 前置依赖任务ID
     val relatedIds: List<Long> = emptyList(),      // 相关任务ID
-    val sortOrder: Int = 0,                        // 排序顺序
+    val sortOrder: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
-    val completedAt: Long? = null                  // 完成时间（毫秒时间戳）
+    val completedAt: Long? = null,
+    // 循环任务字段
+    val recurrence: Recurrence? = null,            // 循环规则
+    val isRecurringInstance: Boolean = false,      // 是否是循环实例
+    val parentRecurringId: Long? = null            // 原始循环任务ID
 )

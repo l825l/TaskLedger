@@ -3,10 +3,12 @@ package com.ledger.task.backup
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import com.ledger.task.TaskLedgerApp
+import com.ledger.task.data.local.AppDatabase
 import com.ledger.task.data.local.DatabaseKeyManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import java.io.File
 import java.util.zip.ZipInputStream
 
@@ -14,10 +16,12 @@ import java.util.zip.ZipInputStream
  * 恢复管理器
  * 负责从 zip 文件恢复数据库和图片附件
  */
-object RestoreManager {
+object RestoreManager : KoinComponent {
 
     private const val TAG = "RestoreManager"
     private const val DATABASE_NAME = "task_ledger"
+
+    private val database: AppDatabase by inject()
 
     /**
      * 从备份恢复
@@ -32,12 +36,11 @@ object RestoreManager {
         password: String? = null
     ): Boolean = withContext(Dispatchers.IO) {
         try {
-            val app = context.applicationContext as TaskLedgerApp
             val resolver = context.contentResolver
             val inputStream = resolver.openInputStream(backupUri) ?: return@withContext false
 
             // 关闭数据库连接
-            app.database.close()
+            database.close()
 
             var encryptionKey: ByteArray? = null
             var encryptedKeyData: ByteArray? = null
@@ -126,8 +129,7 @@ object RestoreManager {
                 Log.i(TAG, "Restored database file")
             }
 
-            // 重置数据库实例，下次访问时会使用新密钥
-            app.resetDatabase()
+            // 数据库会在下次访问时自动重新初始化
 
             Log.i(TAG, "Restore completed successfully")
             true

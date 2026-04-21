@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
-import com.ledger.task.data.model.Task
+import com.ledger.task.domain.model.Task
 import java.time.LocalDate
 
 /**

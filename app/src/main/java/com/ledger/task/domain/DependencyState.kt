@@ -1,7 +1,7 @@
 package com.ledger.task.domain
 
-import com.ledger.task.data.model.Task
-import com.ledger.task.data.model.TaskStatus
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.model.TaskStatus
 
 /**
  * 依赖状态

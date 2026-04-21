@@ -1,9 +1,9 @@
-package com.ledger.task.data.repository
+package com.ledger.task.domain.repository
 
-import com.ledger.task.data.local.TaskEntity
-import com.ledger.task.data.model.AllTasksFilterState
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.Task
+import com.ledger.task.domain.model.AllTasksFilterState
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.SubTask
+import com.ledger.task.domain.model.Task
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -45,4 +45,12 @@ interface TaskRepository {
 
     // 排序更新
     suspend fun updateSortOrder(id: Long, sortOrder: Int)
+
+    // 子任务操作
+    fun getSubTasks(parentId: Long): Flow<List<SubTask>>
+    suspend fun getSubTasksNow(parentId: Long): List<SubTask>
+    suspend fun insertSubTask(subTask: SubTask): Long
+    suspend fun updateSubTask(subTask: SubTask)
+    suspend fun deleteSubTask(id: Long)
+    suspend fun deleteSubTasksByParentId(parentId: Long)
 }

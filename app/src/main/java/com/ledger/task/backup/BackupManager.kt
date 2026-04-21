@@ -3,10 +3,12 @@ package com.ledger.task.backup
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import com.ledger.task.TaskLedgerApp
+import com.ledger.task.data.local.AppDatabase
 import com.ledger.task.data.local.DatabaseKeyManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import java.io.File
 import java.io.FileInputStream
 import java.util.zip.ZipEntry
@@ -23,10 +25,12 @@ data class BackupResult(
  * 备份管理器
  * 负责打包数据库和图片附件为 zip 文件
  */
-object BackupManager {
+object BackupManager : KoinComponent {
 
     private const val TAG = "BackupManager"
     private const val DATABASE_NAME = "task_ledger"
+
+    private val database: AppDatabase by inject()
 
     /**
      * 创建备份
@@ -43,12 +47,11 @@ object BackupManager {
         passwordHint: String? = null
     ): BackupResult = withContext(Dispatchers.IO) {
         try {
-            val app = context.applicationContext as TaskLedgerApp
             val resolver = context.contentResolver
             val outputStream = resolver.openOutputStream(outputUri) ?: return@withContext BackupResult(false)
 
             // 关闭数据库连接，确保所有数据写入磁盘
-            app.database.close()
+            database.close()
             Log.i(TAG, "Database closed for backup")
 
             ZipOutputStream(outputStream).use { zipOut ->
@@ -106,8 +109,7 @@ object BackupManager {
                 zipOut.closeEntry()
             }
 
-            // 重置数据库实例
-            app.resetDatabase()
+            // 数据库会在下次访问时自动重新初始化
             Log.i(TAG, "Backup created successfully")
             BackupResult(true)
         } catch (e: Exception) {

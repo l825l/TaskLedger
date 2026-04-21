@@ -1,4 +1,4 @@
-package com.ledger.task.data.model
+package com.ledger.task.domain.model
 
 import java.time.LocalDate
 
@@ -32,4 +32,3 @@ enum class TimeRange {
     THIS_MONTH,
     CUSTOM
 }
-

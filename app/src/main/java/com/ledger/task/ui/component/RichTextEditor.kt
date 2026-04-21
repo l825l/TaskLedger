@@ -67,15 +67,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
-import com.ledger.task.data.model.RichContent
-import com.ledger.task.data.model.RichTextItem
-import com.ledger.task.data.model.QuickTag
+import com.ledger.task.domain.model.RichContent
+import com.ledger.task.domain.model.RichTextItem
+import com.ledger.task.domain.model.QuickTag
 import com.ledger.task.ui.theme.Accent
-import com.ledger.task.ui.theme.BorderDim
-import com.ledger.task.ui.theme.DeepBackground
-import com.ledger.task.ui.theme.ElevatedBackground
-import com.ledger.task.ui.theme.TextMuted
-import com.ledger.task.ui.theme.TextPrimary
+import com.ledger.task.ui.theme.getBorderDim
+import com.ledger.task.ui.theme.getDeepBackground
+import com.ledger.task.ui.theme.getElevatedBackground
+import com.ledger.task.ui.theme.getTextMuted
+import com.ledger.task.ui.theme.getTextPrimary
 import java.io.ByteArrayOutputStream
 import android.graphics.BitmapFactory
 import android.graphics.Bitmap
@@ -140,7 +140,7 @@ fun RichTextEditor(
     Column(modifier = modifier) {
         Text(
             text = label,
-            color = TextMuted,
+            color = getTextMuted(),
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(bottom = 8.dp)
         )
@@ -149,8 +149,8 @@ fun RichTextEditor(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, BorderDim, RoundedCornerShape(8.dp))
-                .background(ElevatedBackground)
+                .border(1.dp, getBorderDim(), RoundedCornerShape(8.dp))
+                .background(getElevatedBackground())
         ) {
             Column(
                 modifier = Modifier.padding(12.dp)
@@ -161,7 +161,7 @@ fun RichTextEditor(
                         is RichTextItem.Text -> {
                             Text(
                                 text = item.content,
-                                color = TextPrimary,
+                                color = getTextPrimary(),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -224,7 +224,7 @@ fun RichTextEditor(
                                 ) {
                                     Text(
                                         text = "图片加载失败",
-                                        color = TextMuted,
+                                        color = getTextMuted(),
                                         style = MaterialTheme.typography.labelSmall
                                     )
                                 }
@@ -278,7 +278,7 @@ fun RichTextEditor(
                                     Icon(
                                         imageVector = Icons.Default.Clear,
                                         contentDescription = "删除附件",
-                                        tint = TextMuted,
+                                        tint = getTextMuted(),
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -360,7 +360,7 @@ fun RichTextEditor(
                 Icon(
                     imageVector = Icons.Default.TextFields,
                     contentDescription = "添加文字",
-                    tint = if (richContent.items.isEmpty()) Accent else TextMuted,
+                    tint = if (richContent.items.isEmpty()) Accent else getTextMuted(),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -372,7 +372,7 @@ fun RichTextEditor(
                 Icon(
                     imageVector = Icons.Default.AddPhotoAlternate,
                     contentDescription = "添加图片",
-                    tint = TextMuted,
+                    tint = getTextMuted(),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -384,7 +384,7 @@ fun RichTextEditor(
                 Icon(
                     imageVector = Icons.Default.AttachFile,
                     contentDescription = "添加附件",
-                    tint = TextMuted,
+                    tint = getTextMuted(),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -398,7 +398,7 @@ fun RichTextEditor(
                     Icon(
                         imageVector = Icons.Default.Label,
                         contentDescription = "添加快捷标签",
-                        tint = TextMuted,
+                        tint = getTextMuted(),
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -540,7 +540,7 @@ fun RichTextPreview(
                 is RichTextItem.Text -> {
                     Text(
                         text = item.content,
-                        color = TextPrimary,
+                        color = getTextPrimary(),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -582,7 +582,7 @@ fun RichTextPreview(
                             Icon(
                                 imageVector = Icons.Default.Image,
                                 contentDescription = "图片",
-                                tint = TextMuted,
+                                tint = getTextMuted(),
                                 modifier = Modifier.size(48.dp)
                             )
                         }

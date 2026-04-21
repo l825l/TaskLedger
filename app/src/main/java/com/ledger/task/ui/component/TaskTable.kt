@@ -24,14 +24,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.ledger.task.R as AppR
-import com.ledger.task.data.model.DisplayStatus
-import com.ledger.task.data.model.Task
-import com.ledger.task.ui.theme.BorderDim
-import com.ledger.task.ui.theme.ElevatedBackground
+import com.ledger.task.domain.model.DisplayStatus
+import com.ledger.task.domain.model.Task
+import com.ledger.task.ui.theme.getBorderDim
+import com.ledger.task.ui.theme.getElevatedBackground
 import com.ledger.task.ui.theme.PriorityMid
-import com.ledger.task.ui.theme.SurfaceBackground
-import com.ledger.task.ui.theme.TextMuted
-import com.ledger.task.ui.theme.TextSecondary
+import com.ledger.task.ui.theme.getSurfaceBackground
+import com.ledger.task.ui.theme.getTextMuted
+import com.ledger.task.ui.theme.getTextSecondary
 import com.ledger.task.viewmodel.SortField
 import com.ledger.task.viewmodel.SortState
 import java.time.LocalDate
@@ -53,20 +53,20 @@ fun TaskTable(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .border(1.dp, BorderDim, RoundedCornerShape(6.dp))
-            .background(SurfaceBackground, RoundedCornerShape(6.dp))
+            .border(1.dp, getBorderDim(), RoundedCornerShape(6.dp))
+            .background(getSurfaceBackground(), RoundedCornerShape(6.dp))
     ) {
         // 表头
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(ElevatedBackground)
+                .background(getElevatedBackground())
                 .padding(horizontal = 20.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "#",
-                color = TextMuted,
+                color = getTextMuted(),
                 style = MaterialTheme.typography.labelSmall,
                 fontFamily = FontFamily.Monospace,
                 modifier = Modifier.width(40.dp)
@@ -84,7 +84,7 @@ fun TaskTable(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(BorderDim, RoundedCornerShape(1.dp))
+                .background(getBorderDim(), RoundedCornerShape(1.dp))
         )
 
         // 内容
@@ -111,24 +111,24 @@ fun TaskTable(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(BorderDim, RoundedCornerShape(1.dp))
+                .background(getBorderDim(), RoundedCornerShape(1.dp))
         )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(ElevatedBackground)
+                .background(getElevatedBackground())
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = context.getString(AppR.string.records_count, tasks.size),
-                color = TextMuted,
+                color = getTextMuted(),
                 style = MaterialTheme.typography.labelMedium,
                 fontFamily = FontFamily.Monospace
             )
             Text(
                 text = context.getString(AppR.string.updated_at) + " $timeStr",
-                color = TextMuted,
+                color = getTextMuted(),
                 style = MaterialTheme.typography.labelMedium,
                 fontFamily = FontFamily.Monospace
             )

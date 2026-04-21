@@ -33,27 +33,30 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import com.ledger.task.data.model.DisplayStatus
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.Task
-import com.ledger.task.data.model.TaskStatus
+import com.ledger.task.domain.model.DisplayStatus
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.model.TaskStatus
 import com.ledger.task.ui.theme.Accent
-import com.ledger.task.ui.theme.DeepBackground
-import com.ledger.task.ui.theme.ElevatedBackground
+import com.ledger.task.ui.theme.getDeepBackground
+import com.ledger.task.ui.theme.getElevatedBackground
 import com.ledger.task.ui.theme.PriorityHigh
 import com.ledger.task.ui.theme.PriorityMid
 import com.ledger.task.ui.theme.StatusDone
 import com.ledger.task.ui.theme.StatusOverdue
 import com.ledger.task.ui.theme.StatusPending
 import com.ledger.task.ui.theme.StatusProgress
-import com.ledger.task.ui.theme.SurfaceBackground
-import com.ledger.task.ui.theme.TextMuted
-import com.ledger.task.ui.theme.TextPrimary
+import com.ledger.task.ui.theme.getSurfaceBackground
+import com.ledger.task.ui.theme.getTextMuted
+import com.ledger.task.ui.theme.getTextPrimary
 import com.ledger.task.R as AppR
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /**
  * 关联任务选择对话框
+ * @param maxDeadline 最大允许的截止时间（用于前置依赖选择，前置任务截止时间不能晚于此时间）
+ * @param excludeOverdue 是否排除已逾期任务
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,9 +65,26 @@ fun TaskRelationDialog(
     availableTasks: List<Task>,
     selectedTaskIds: List<Long>,
     onConfirm: (List<Long>) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    maxDeadline: LocalDateTime? = null,
+    excludeOverdue: Boolean = false
 ) {
     var selectedIds by remember { mutableStateOf(selectedTaskIds) }
+
+    // 过滤任务
+    val filteredTasks = remember(availableTasks, maxDeadline, excludeOverdue) {
+        availableTasks.filter { task ->
+            // 排除已逾期任务
+            if (excludeOverdue && task.displayStatus == DisplayStatus.OVERDUE) {
+                return@filter false
+            }
+            // 排除截止时间晚于当前任务的任务
+            if (maxDeadline != null && task.deadline.isAfter(maxDeadline)) {
+                return@filter false
+            }
+            true
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -74,10 +94,10 @@ fun TaskRelationDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // 任务列表
-                if (availableTasks.isEmpty()) {
+                if (filteredTasks.isEmpty()) {
                     Text(
-                        text = "暂无可用任务",
-                        color = TextMuted,
+                        text = if (availableTasks.isNotEmpty()) "没有符合条件的前置任务\n（已排除逾期任务或截止时间较晚的任务）" else "暂无可用任务",
+                        color = getTextMuted(),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 } else {
@@ -85,7 +105,7 @@ fun TaskRelationDialog(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.height(300.dp)
                     ) {
-                        items(availableTasks) { task ->
+                        items(filteredTasks) { task ->
                             TaskRelationItem(
                                 task = task,
                                 isSelected = selectedIds.contains(task.id),
@@ -152,7 +172,7 @@ private fun TaskRelationItem(
             ) {
                 Text(
                     text = task.title,
-                    color = TextPrimary,
+                    color = getTextPrimary(),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f)
                 )
@@ -166,7 +186,7 @@ private fun TaskRelationItem(
             ) {
                 Text(
                     text = "截止: ${task.deadline.format(formatter)}",
-                    color = if (isOverdue) StatusOverdue else TextMuted,
+                    color = if (isOverdue) StatusOverdue else getTextMuted(),
                     style = MaterialTheme.typography.labelSmall,
                     fontFamily = FontFamily.Monospace
                 )
