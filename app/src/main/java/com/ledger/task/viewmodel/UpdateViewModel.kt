@@ -1,6 +1,12 @@
 package com.ledger.task.viewmodel
 
 import android.app.Application
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ledger.task.update.ApkDownloader
@@ -33,7 +39,8 @@ data class UpdateUiState(
     val updateState: UpdateState = UpdateState.Idle,
     val lastCheckTime: String? = null,
     val isChecking: Boolean = false,
-    val isDownloading: Boolean = false
+    val isDownloading: Boolean = false,
+    val needInstallPermission: Boolean = false  // 需要请求安装权限
 )
 
 /**
@@ -141,21 +148,67 @@ class UpdateViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    companion object {
+        private const val TAG = "UpdateViewModel"
+    }
+
     /**
      * 安装更新
      */
     fun installUpdate(file: File): Boolean {
         val context = getApplication<Application>()
+        Log.i(TAG, "installUpdate called, file=${file.absolutePath}, exists=${file.exists()}")
 
-        // 检查安装权限
-        if (!ApkInstaller.canRequestPackageInstalls(context)) {
+        // 检查文件是否存在
+        if (!file.exists()) {
+            Log.e(TAG, "APK 文件不存在")
             _uiState.value = _uiState.value.copy(
-                updateState = UpdateState.Error("请授予安装应用权限")
+                updateState = UpdateState.Error("安装包文件不存在")
             )
             return false
         }
 
-        return ApkInstaller.install(context, file)
+        // 检查安装权限
+        if (!ApkInstaller.canRequestPackageInstalls(context)) {
+            Log.w(TAG, "没有安装权限，需要请求权限")
+            _uiState.value = _uiState.value.copy(
+                needInstallPermission = true
+            )
+            return false
+        }
+
+        val result = ApkInstaller.install(context, file)
+        Log.i(TAG, "安装结果: $result")
+        return result
+    }
+
+    /**
+     * 请求安装权限
+     */
+    fun requestInstallPermission(): Intent? {
+        val context = getApplication<Application>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                data = Uri.parse("package:${context.packageName}")
+            }
+            return intent
+        }
+        return null
+    }
+
+    /**
+     * 安装权限结果处理
+     */
+    fun onInstallPermissionResult(granted: Boolean, file: File) {
+        if (granted) {
+            val context = getApplication<Application>()
+            ApkInstaller.install(context, file)
+        } else {
+            _uiState.value = _uiState.value.copy(
+                updateState = UpdateState.Error("需要安装权限才能更新应用")
+            )
+        }
+        _uiState.value = _uiState.value.copy(needInstallPermission = false)
     }
 
     /**

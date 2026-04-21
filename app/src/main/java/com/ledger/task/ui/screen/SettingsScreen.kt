@@ -1,6 +1,12 @@
 package com.ledger.task.ui.screen
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -72,6 +78,7 @@ import com.ledger.task.viewmodel.SettingsViewModel
 import com.ledger.task.viewmodel.UpdateState
 import com.ledger.task.viewmodel.UpdateViewModel
 import org.koin.androidx.compose.koinViewModel
+import java.io.File
 
 /**
  * 设置页面
@@ -484,9 +491,18 @@ fun SettingsScreen(
     // 更新对话框
     UpdateDialog(
         updateState = updateUiState.updateState,
+        needInstallPermission = updateUiState.needInstallPermission,
         onDismiss = { updateViewModel.resetState() },
         onDownload = { info -> updateViewModel.downloadUpdate(info) },
         onInstall = { file -> updateViewModel.installUpdate(file) },
+        onRequestInstallPermission = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                }
+                context.startActivity(intent)
+            }
+        },
         formatFileSize = { bytes -> updateViewModel.formatFileSize(bytes) }
     )
 }
@@ -585,9 +601,11 @@ private fun ThemeOption(
 @Composable
 private fun UpdateDialog(
     updateState: UpdateState,
+    needInstallPermission: Boolean = false,
     onDismiss: () -> Unit,
     onDownload: (com.ledger.task.update.ReleaseInfo) -> Unit,
     onInstall: (java.io.File) -> Boolean,
+    onRequestInstallPermission: () -> Unit = {},
     formatFileSize: (Long) -> String
 ) {
     when (updateState) {
@@ -688,24 +706,49 @@ private fun UpdateDialog(
             )
         }
         is UpdateState.DownloadComplete -> {
-            AlertDialog(
-                onDismissRequest = onDismiss,
-                title = { Text("下载完成") },
-                text = { Text("是否立即安装更新？") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        onInstall(updateState.file)
-                        onDismiss()
-                    }) {
-                        Text("安装")
+            if (needInstallPermission) {
+                // 需要安装权限
+                AlertDialog(
+                    onDismissRequest = onDismiss,
+                    title = { Text("需要权限") },
+                    text = { Text("安装应用需要授予安装权限，是否前往设置开启？") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            onRequestInstallPermission()
+                            onDismiss()
+                        }) {
+                            Text("去设置")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = onDismiss) {
+                            Text("取消")
+                        }
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = onDismiss) {
-                        Text("稍后")
+                )
+            } else {
+                AlertDialog(
+                    onDismissRequest = onDismiss,
+                    title = { Text("下载完成") },
+                    text = { Text("是否立即安装更新？") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val success = onInstall(updateState.file)
+                            if (success) {
+                                onDismiss()
+                            }
+                            // 如果安装失败（需要权限），不关闭对话框，让用户看到权限提示
+                        }) {
+                            Text("安装")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = onDismiss) {
+                            Text("稍后")
+                        }
                     }
-                }
-            )
+                )
+            }
         }
         is UpdateState.Error -> {
             AlertDialog(

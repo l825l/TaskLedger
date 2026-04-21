@@ -20,6 +20,8 @@ class VersionChecker(private val context: Context) {
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
+        explicitNulls = false
+        coerceInputValues = true
     }
 
     private val client = OkHttpClient.Builder()
@@ -130,7 +132,7 @@ class VersionChecker(private val context: Context) {
             version = version,
             changelog = release.body,
             apkUrl = apkAsset?.browserDownloadUrl ?: "",
-            fileSize = apkAsset?.size ?: 0
+            fileSize = 0  // Gitee API 不返回文件大小
         )
     }
 

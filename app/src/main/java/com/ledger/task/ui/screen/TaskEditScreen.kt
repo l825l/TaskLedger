@@ -58,11 +58,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.ledger.task.data.model.DefaultCategories
-import com.ledger.task.data.model.Priority
-import com.ledger.task.data.model.RichContent
-import com.ledger.task.data.model.Task
-import com.ledger.task.data.model.TaskStatus
+import com.ledger.task.domain.model.DefaultCategories
+import com.ledger.task.domain.model.Priority
+import com.ledger.task.domain.model.RichContent
+import com.ledger.task.domain.model.Task
+import com.ledger.task.domain.model.TaskStatus
 import com.ledger.task.ui.theme.Accent
 import com.ledger.task.ui.theme.AccentDim
 import com.ledger.task.ui.theme.BorderDim
@@ -1036,7 +1036,7 @@ private fun RelatedTaskCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategorySelectionDialog(
-    categories: List<com.ledger.task.data.model.CategoryNode>,
+    categories: List<com.ledger.task.domain.model.CategoryNode>,
     selectedCategory: String,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -1075,7 +1075,7 @@ private fun CategorySelectionDialog(
                             modifier = Modifier
                                 .size(12.dp)
                                 .clip(CircleShape)
-                                .background(com.ledger.task.data.model.DefaultCategories.ColorDefault)
+                                .background(com.ledger.task.domain.model.DefaultCategories.ColorDefault)
                         )
                         Text(
                             text = "默认",

@@ -46,7 +46,6 @@ data class GiteeRelease(
     data class GiteeAsset(
         val name: String,
         @SerialName("browser_download_url")
-        val browserDownloadUrl: String,
-        val size: Long = 0  // Gitee API 不返回此字段，设置默认值
+        val browserDownloadUrl: String
     )
 }
