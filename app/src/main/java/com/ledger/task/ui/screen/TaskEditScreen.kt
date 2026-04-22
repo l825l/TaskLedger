@@ -5,6 +5,7 @@ import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -53,14 +55,21 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ledger.task.domain.model.DefaultCategories
 import com.ledger.task.domain.model.Priority
@@ -595,172 +604,193 @@ fun TaskEditScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp)
+                        .padding(top = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // 标题行
-                    Text(
-                        text = "关联事项",
-                        color = TextMuted,
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
-                    // 添加按钮行
-                    Row(
+                    // 前置依赖区域
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // 添加前置依赖按钮
+                        // 标题行 + 添加按钮
                         Row(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(ElevatedBackground)
-                                .border(1.dp, BorderDim, RoundedCornerShape(8.dp))
-                                .clickable { viewModel.onShowPredecessorDialog(true) }
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                tint = Accent,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = "前置依赖",
-                                color = TextPrimary,
-                                fontSize = 13.sp
-                            )
-                            if (uiState.predecessorIds.isNotEmpty()) {
-                                Text(
-                                    text = "(${uiState.predecessorIds.size})",
-                                    color = Accent,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-
-                        // 添加相关任务按钮
-                        Row(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(ElevatedBackground)
-                                .border(1.dp, BorderDim, RoundedCornerShape(8.dp))
-                                .clickable { viewModel.onShowRelatedDialog(true) }
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                tint = Accent,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = "相关任务",
-                                color = TextPrimary,
-                                fontSize = 13.sp
-                            )
-                            if (uiState.relatedIds.isNotEmpty()) {
-                                Text(
-                                    text = "(${uiState.relatedIds.size})",
-                                    color = Accent,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 底部：横向滚动显示关联事务
-            if (uiState.predecessorTasks.isNotEmpty() || uiState.relatedTasks.isNotEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp)
-                ) {
-                    // 检查所有前置依赖是否已完成
-                    val allPredecessorsCompleted = uiState.predecessorTasks.isNotEmpty() &&
-                            uiState.predecessorTasks.all { it.status == TaskStatus.DONE }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = context.getString(AppR.string.related_tasks),
-                            color = TextMuted,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 24.dp)
-                        )
-
-                        // 依赖项已解除提示
-                        if (allPredecessorsCompleted) {
                             Row(
-                                modifier = Modifier
-                                    .padding(end = 24.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(com.ledger.task.ui.theme.StatusDone.copy(alpha = 0.15f))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = com.ledger.task.ui.theme.StatusDone,
-                                    modifier = Modifier.size(12.dp)
-                                )
                                 Text(
-                                    text = "依赖项已解除",
-                                    color = com.ledger.task.ui.theme.StatusDone,
-                                    style = MaterialTheme.typography.labelSmall
+                                    text = "前置依赖",
+                                    color = TextPrimary,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                                if (uiState.predecessorTasks.isNotEmpty()) {
+                                    val completed = uiState.predecessorTasks.count { it.status == TaskStatus.DONE }
+                                    Text(
+                                        text = "($completed/${uiState.predecessorTasks.size})",
+                                        color = if (completed == uiState.predecessorTasks.size) StatusDone else TextMuted,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                            }
+
+                            // 添加按钮
+                            Surface(
+                                onClick = { viewModel.onShowPredecessorDialog(true) },
+                                shape = RoundedCornerShape(6.dp),
+                                color = AccentDim,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Accent.copy(alpha = 0.3f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        tint = Accent,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = "添加",
+                                        color = Accent,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        // 前置依赖卡片列表
+                        if (uiState.predecessorTasks.isNotEmpty()) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                uiState.predecessorTasks.forEach { task ->
+                                    RelationTaskItem(
+                                        task = task,
+                                        isCompleted = task.status == TaskStatus.DONE,
+                                        onRemove = {
+                                            viewModel.onShowRemoveConfirmDialog(task.id, isPredecessor = true)
+                                        },
+                                        onQuickComplete = { viewModel.onQuickCompleteTask(task.id) },
+                                        onQuickUndoComplete = { viewModel.onQuickUndoCompleteTask(task.id) },
+                                        onClick = { onNavigateToTask(task.id) }
+                                    )
+                                }
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(SurfaceBackground)
+                                    .padding(vertical = 16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "无前置依赖",
+                                    color = TextMuted,
+                                    style = MaterialTheme.typography.bodySmall
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 24.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    // 相关任务区域
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // 前置依赖任务
-                        uiState.predecessorTasks.forEach { task ->
-                            RelatedTaskCard(
-                                task = task,
-                                relationType = "前置",
-                                isCompleted = task.status == TaskStatus.DONE,
-                                onRemove = {
-                                    val newIds = uiState.predecessorIds.filter { it != task.id }
-                                    viewModel.onPredecessorIdsChange(newIds)
-                                },
-                                onClick = { onNavigateToTask(task.id) }
-                            )
+                        // 标题行 + 添加按钮
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "相关任务",
+                                    color = TextPrimary,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                                if (uiState.relatedTasks.isNotEmpty()) {
+                                    Text(
+                                        text = "(${uiState.relatedTasks.size})",
+                                        color = TextMuted,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                            }
+
+                            // 添加按钮
+                            Surface(
+                                onClick = { viewModel.onShowRelatedDialog(true) },
+                                shape = RoundedCornerShape(6.dp),
+                                color = ElevatedBackground,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderDim)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        tint = Accent,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = "添加",
+                                        color = Accent,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
                         }
 
-                        // 相关任务
-                        uiState.relatedTasks.forEach { task ->
-                            RelatedTaskCard(
-                                task = task,
-                                relationType = "相关",
-                                isCompleted = task.status == TaskStatus.DONE,
-                                onRemove = {
-                                    val newIds = uiState.relatedIds.filter { it != task.id }
-                                    viewModel.onRelatedIdsChange(newIds)
-                                },
-                                onClick = { onNavigateToTask(task.id) }
-                            )
+                        // 相关任务卡片列表（使用过滤后的列表）
+                        if (uiState.filteredRelatedTasks.isNotEmpty()) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                uiState.filteredRelatedTasks.forEach { task ->
+                                    RelationTaskItem(
+                                        task = task,
+                                        isCompleted = task.status == TaskStatus.DONE,
+                                        onRemove = {
+                                            viewModel.onShowRemoveConfirmDialog(task.id, isPredecessor = false)
+                                        },
+                                        onQuickComplete = { viewModel.onQuickCompleteTask(task.id) },
+                                        onQuickUndoComplete = { viewModel.onQuickUndoCompleteTask(task.id) },
+                                        onClick = { onNavigateToTask(task.id) }
+                                    )
+                                }
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(SurfaceBackground)
+                                    .padding(vertical = 16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "无相关任务",
+                                    color = TextMuted,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                     }
                 }
@@ -987,6 +1017,154 @@ fun TaskEditScreen(
                     }
                 }
             )
+        }
+    }
+}
+
+/**
+ * 关联任务项（支持滑动完成/撤销）
+ */
+@Composable
+private fun RelationTaskItem(
+    task: Task,
+    isCompleted: Boolean,
+    onRemove: () -> Unit,
+    onQuickComplete: () -> Unit = {},
+    onQuickUndoComplete: () -> Unit = {},
+    onClick: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    val formatter = java.time.format.DateTimeFormatter.ofPattern("MM月dd日 HH:mm")
+    val priorityBgColor = task.priority.bgColor
+
+    // 滑动状态
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    val density = LocalDensity.current
+    val swipeThreshold = with(density) { 100.dp.toPx() }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+                when {
+                    offsetX < -swipeThreshold -> if (isCompleted) StatusPending.copy(alpha = 0.3f) else StatusDone.copy(alpha = 0.3f)
+                    else -> Color.Transparent
+                }
+            )
+    ) {
+        // 背景操作提示
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = if (offsetX < 0) Arrangement.Start else Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (offsetX < 0) {
+                Icon(
+                    imageVector = if (isCompleted) Icons.Default.Close else Icons.Default.Check,
+                    contentDescription = if (isCompleted) "撤销完成" else "完成",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = if (isCompleted) "撤销" else "完成",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        }
+
+        // 前景卡片
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(offsetX.roundToInt(), 0) }
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(priorityBgColor)
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            if (offsetX < -swipeThreshold) {
+                                // 执行完成/撤销
+                                if (isCompleted) onQuickUndoComplete() else onQuickComplete()
+                            }
+                            offsetX = 0f
+                        },
+                        onHorizontalDrag = { _, dragAmount ->
+                            // 只允许左滑
+                            val newOffset = offsetX + dragAmount
+                            offsetX = newOffset.coerceIn(-swipeThreshold * 1.5f, 0f)
+                        }
+                    )
+                }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onClick() }
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 任务信息
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = task.title,
+                        color = TextPrimary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // 截止日期
+                        Text(
+                            text = "截止: ${task.deadline.format(formatter)}",
+                            color = TextMuted,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        // 状态标签
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = when (task.status) {
+                                TaskStatus.DONE -> StatusDone.copy(alpha = 0.3f)
+                                TaskStatus.IN_PROGRESS -> StatusProgress.copy(alpha = 0.3f)
+                                TaskStatus.PENDING -> StatusPending.copy(alpha = 0.3f)
+                            }
+                        ) {
+                            Text(
+                                text = task.status.label,
+                                color = when (task.status) {
+                                    TaskStatus.DONE -> StatusDone
+                                    TaskStatus.IN_PROGRESS -> StatusProgress
+                                    TaskStatus.PENDING -> StatusPending
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+
+                // 移除按钮
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "移除",
+                        tint = TextMuted,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
     }
 }
