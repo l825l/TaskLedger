@@ -26,7 +26,7 @@ object BackupPasswordProtection {
     private const val RECOVERY_CODE_LENGTH = 8
     private const val RECOVERY_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // 排除易混淆字符
 
-    private const val MIN_PASSWORD_LENGTH = 8
+    const val MIN_PASSWORD_LENGTH = 8
 
     /**
      * 使用密码加密数据
@@ -154,8 +154,8 @@ object BackupPasswordProtection {
         val hasSpecial = password.any { !it.isLetterOrDigit() }
 
         return when {
-            password.length >= 8 && hasLetter && hasDigit && hasSpecial -> PasswordStrength.STRONG
-            password.length >= 6 && (hasLetter || hasDigit) -> PasswordStrength.MEDIUM
+            password.length >= MIN_PASSWORD_LENGTH && hasLetter && hasDigit && hasSpecial -> PasswordStrength.STRONG
+            password.length >= MIN_PASSWORD_LENGTH && (hasLetter || hasDigit) -> PasswordStrength.MEDIUM
             else -> PasswordStrength.WEAK
         }
     }

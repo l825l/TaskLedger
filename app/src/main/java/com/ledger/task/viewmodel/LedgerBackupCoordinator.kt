@@ -283,10 +283,10 @@ class LedgerBackupCoordinator(
             delay(1500) // 延迟让用户看到提示
             val packageManager = context.packageManager
             val intent = packageManager.getLaunchIntentForPackage(context.packageName)
-            val componentName = intent?.component
-            val mainIntent = android.content.Intent.makeRestartActivityTask(componentName)
-            context.startActivity(mainIntent)
-            Runtime.getRuntime().exit(0)
+            intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK or android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            // 使用 Activity 生命周期方法而非强制退出
+            // Runtime.getRuntime().exit(0) 会绕过正常的生命周期回调
         }
     }
 

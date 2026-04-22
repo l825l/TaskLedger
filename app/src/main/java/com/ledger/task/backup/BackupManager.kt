@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import com.ledger.task.data.local.AppDatabase
 import com.ledger.task.data.local.DatabaseKeyManager
+import com.ledger.task.backup.BackupPasswordProtection.MIN_PASSWORD_LENGTH
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
@@ -64,7 +65,7 @@ object BackupManager : KoinComponent {
 
                 // 2. 备份加密密钥（使用密码保护）
                 val encryptionKey = DatabaseKeyManager.getOrCreateKey(context)
-                val keyData = if (password != null && password.length >= 6) {
+                val keyData = if (password != null && password.length >= MIN_PASSWORD_LENGTH) {
                     // 使用密码加密密钥
                     val encryptedKey = BackupPasswordProtection.encrypt(password, encryptionKey)
                     zipOut.putNextEntry(ZipEntry("keys/db_key_encrypted.bin"))

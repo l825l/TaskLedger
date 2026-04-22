@@ -75,6 +75,7 @@ import com.ledger.task.ui.theme.getElevatedBackground
 import com.ledger.task.ui.theme.getSurfaceBackground
 import com.ledger.task.ui.theme.getTextMuted
 import com.ledger.task.viewmodel.ExportFileInfo
+import com.ledger.task.backup.BackupPasswordProtection.MIN_PASSWORD_LENGTH
 import com.ledger.task.viewmodel.LedgerCenterViewModel
 import java.time.Instant
 import java.time.LocalDate
@@ -485,9 +486,9 @@ fun LedgerCenterScreen(
                         isError = errorMessage != null,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    if (errorMessage != null) {
+                    errorMessage?.let { msg ->
                         Text(
-                            text = errorMessage!!,
+                            text = msg,
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.labelSmall
                         )
@@ -503,7 +504,7 @@ fun LedgerCenterScreen(
                             errorMessage = "密码错误"
                         }
                     },
-                    enabled = password.length >= 6
+                    enabled = password.length >= MIN_PASSWORD_LENGTH
                 ) {
                     Text("确认")
                 }
@@ -1224,7 +1225,7 @@ private fun RestorePasswordDialog(
         confirmButton = {
             Button(
                 onClick = { if (password.length >= 6) onConfirm(password) },
-                enabled = password.length >= 6
+                enabled = password.length >= MIN_PASSWORD_LENGTH
             ) {
                 Text("确定")
             }
@@ -1300,9 +1301,9 @@ private fun BiometricSetupDialog(
                         isError = errorMessage != null,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    if (errorMessage != null) {
+                    errorMessage?.let { msg ->
                         Text(
-                            text = errorMessage!!,
+                            text = msg,
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.labelSmall
                         )
@@ -1330,9 +1331,9 @@ private fun BiometricSetupDialog(
                         isError = errorMessage != null,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    if (errorMessage != null) {
+                    errorMessage?.let { msg ->
                         Text(
-                            text = errorMessage!!,
+                            text = msg,
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.labelSmall
                         )
@@ -1371,34 +1372,31 @@ private fun BiometricSetupDialog(
                 // 需要设置密码
                 Button(
                     onClick = {
-                        android.util.Log.i("BiometricSetupDialog", "Set password and enable, password length: ${password.length}")
-                        if (password.length >= 6) {
+                        if (password.length >= MIN_PASSWORD_LENGTH) {
                             onEnable(password)
                         } else {
-                            errorMessage = "密码长度至少6位"
+                            errorMessage = "密码长度至少${MIN_PASSWORD_LENGTH}位"
                         }
                     },
-                    enabled = password.length >= 6
+                    enabled = password.length >= MIN_PASSWORD_LENGTH
                 ) {
                     Text("设置并启用")
                 }
             } else if (showPasswordInput) {
                 Button(
                     onClick = {
-                        android.util.Log.i("BiometricSetupDialog", "Enable button clicked, password length: ${password.length}")
-                        if (password.length >= 6) {
+                        if (password.length >= MIN_PASSWORD_LENGTH) {
                             onEnable(password)
                         } else {
-                            errorMessage = "密码长度至少6位"
+                            errorMessage = "密码长度至少${MIN_PASSWORD_LENGTH}位"
                         }
                     },
-                    enabled = password.length >= 6
+                    enabled = password.length >= MIN_PASSWORD_LENGTH
                 ) {
                     Text("启用")
                 }
             } else {
                 Button(onClick = {
-                    android.util.Log.i("BiometricSetupDialog", "First enable button clicked, showing password input")
                     showPasswordInput = true
                 }) {
                     Text("启用")

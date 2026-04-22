@@ -13,16 +13,18 @@ android {
         applicationId = "com.ledger.task"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.2.0"
+        versionCode = 4
+        versionName = "1.2.1"
     }
 
     signingConfigs {
         create("release") {
             storeFile = file("release-keystore.jks")
-            storePassword = "taskledger2024"
+            val keystorePwd = project.findProperty("KEYSTORE_PASSWORD") as String?
+            val keyPwd = project.findProperty("KEY_PASSWORD") as String?
+            storePassword = keystorePwd ?: "taskledger2024"
             keyAlias = "taskledger"
-            keyPassword = "taskledger2024"
+            keyPassword = keyPwd ?: "taskledger2024"
         }
     }
 

@@ -66,7 +66,7 @@ object ThemeManager {
     fun initThemeMode(context: Context): MutableState<ThemeMode> {
         val mode = getThemeMode(context)
         _currentThemeMode = mutableStateOf(mode)
-        return _currentThemeMode!!
+        return requireNotNull(_currentThemeMode) { "Theme mode must be initialized" }
     }
 }
 

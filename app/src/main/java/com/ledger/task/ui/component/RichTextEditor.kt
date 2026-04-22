@@ -437,9 +437,9 @@ fun RichTextEditor(
     }
 
     // 图片预览对话框
-    if (previewImageBase64 != null) {
+    previewImageBase64?.let { base64 ->
         ImagePreviewDialog(
-            base64Image = previewImageBase64!!,
+            base64Image = base64,
             onDismiss = { previewImageBase64 = null }
         )
     }
@@ -650,9 +650,9 @@ fun RichTextPreview(
     }
 
     // 图片预览对话框
-    if (previewImageBase64 != null) {
+    previewImageBase64?.let { base64 ->
         ImagePreviewDialog(
-            base64Image = previewImageBase64!!,
+            base64Image = base64,
             onDismiss = { previewImageBase64 = null }
         )
     }

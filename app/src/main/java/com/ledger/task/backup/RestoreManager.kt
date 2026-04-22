@@ -97,7 +97,8 @@ object RestoreManager : KoinComponent {
                 // 需要密码解密
                 if (password != null) {
                     try {
-                        encryptionKey = BackupPasswordProtection.decrypt(password, encryptedKeyData!!)
+                        val keyData = encryptedKeyData ?: return@withContext false
+                        encryptionKey = BackupPasswordProtection.decrypt(password, keyData)
                         Log.i(TAG, "Decrypted encryption key with password")
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to decrypt key: ${e.message}")
@@ -111,7 +112,8 @@ object RestoreManager : KoinComponent {
 
             // 先导入密钥
             if (encryptionKey != null) {
-                val keyImported = DatabaseKeyManager.importKey(context, encryptionKey!!)
+                val key = encryptionKey ?: return@withContext false
+                val keyImported = DatabaseKeyManager.importKey(context, key)
                 if (!keyImported) {
                     Log.e(TAG, "Failed to import encryption key")
                     return@withContext false

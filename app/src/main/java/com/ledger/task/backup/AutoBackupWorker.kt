@@ -48,8 +48,6 @@ class AutoBackupWorker(
             val passwordStorage = BackupPasswordStorage(context)
             val password = passwordStorage.getPassword()
 
-            Log.i(TAG, "Backup password check: ${if (password != null) "found" else "not found"}")
-
             if (password == null) {
                 Log.w(TAG, "No backup password set, skipping auto backup")
                 return Result.failure()
