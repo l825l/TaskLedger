@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -101,11 +99,11 @@ fun SubTaskList(
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
             } else {
-                LazyColumn(
+                Column(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.height((subTasks.size * 48).dp.coerceAtMost(240.dp))
                 ) {
-                    items(subTasks, key = { it.id }) { subTask ->
+                    subTasks.forEach { subTask ->
                         SubTaskItem(
                             subTask = subTask,
                             onToggle = { onToggle(subTask) },

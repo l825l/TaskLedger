@@ -26,12 +26,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -42,6 +45,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -82,7 +86,10 @@ import com.ledger.task.ui.component.PriorityBadge
 import com.ledger.task.ui.component.RelatedTasksContainer
 import com.ledger.task.ui.component.RichTextEditor
 import com.ledger.task.ui.component.StatusTag
+import com.ledger.task.ui.component.SubTaskList
 import com.ledger.task.ui.component.TaskRelationDialog
+import com.ledger.task.domain.model.Recurrence
+import com.ledger.task.domain.model.RecurrenceType
 import com.ledger.task.viewmodel.TaskEditViewModel
 import com.ledger.task.R as AppR
 import java.time.Instant
@@ -178,14 +185,44 @@ fun TaskEditScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            // 顶部：状态滑块
-            StatusSlider(
-                currentStatus = uiState.status,
-                onStatusChange = viewModel::onStatusChange,
+            // 顶部：状态滑块（带阻塞提示）
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 16.dp)
-            )
+            ) {
+                // 阻塞提示
+                if (uiState.dependencyState.isBlocked) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(com.ledger.task.ui.theme.StatusOverdue.copy(alpha = 0.15f))
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Block,
+                            contentDescription = context.getString(AppR.string.blocked),
+                            tint = com.ledger.task.ui.theme.StatusOverdue,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = context.getString(AppR.string.blocked_hint),
+                            color = com.ledger.task.ui.theme.StatusOverdue,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                StatusSlider(
+                    currentStatus = uiState.status,
+                    onStatusChange = viewModel::onStatusChangeWithValidation,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             // 中部：属性网格
             Column(
@@ -537,6 +574,23 @@ fun TaskEditScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                // 子任务列表
+                SubTaskList(
+                    subTasks = uiState.subTasks,
+                    onToggle = { viewModel.onToggleSubTask(it) },
+                    onDelete = { viewModel.onDeleteSubTask(it) },
+                    onAdd = { viewModel.onAddSubTask(it) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // 循环任务设置
+                RecurrenceSection(
+                    recurrence = uiState.recurrence,
+                    onShowDialog = { viewModel.onShowRecurrenceDialog(true) },
+                    onClear = { viewModel.onClearRecurrence() },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
                 // 关联事项区域
                 Column(
                     modifier = Modifier
@@ -867,6 +921,73 @@ fun TaskEditScreen(
                 }
             )
         }
+
+        // 依赖验证错误对话框
+        if (uiState.dependencyValidationError != null) {
+            AlertDialog(
+                onDismissRequest = { viewModel.onDismissDependencyError() },
+                title = { Text(context.getString(AppR.string.cannot_add_dependency)) },
+                text = {
+                    Text(when (val error = uiState.dependencyValidationError) {
+                        is com.ledger.task.domain.DependencyValidationResult.SelfReference -> context.getString(AppR.string.self_reference_error)
+                        is com.ledger.task.domain.DependencyValidationResult.DirectCycle -> context.getString(AppR.string.cycle_dependency_error)
+                        is com.ledger.task.domain.DependencyValidationResult.PredecessorNotFound -> context.getString(AppR.string.predecessor_not_found)
+                        else -> context.getString(AppR.string.unknown_error)
+                    })
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.onDismissDependencyError() }) {
+                        Text(context.getString(AppR.string.got_it))
+                    }
+                }
+            )
+        }
+
+        // 循环任务设置对话框
+        if (uiState.showRecurrenceDialog) {
+            RecurrenceDialog(
+                recurrence = uiState.recurrence,
+                onTypeChange = { viewModel.onRecurrenceTypeChange(it) },
+                onIntervalChange = { viewModel.onRecurrenceIntervalChange(it) },
+                onDayOfWeekToggle = { viewModel.onDayOfWeekToggle(it) },
+                onConfirm = { viewModel.onConfirmRecurrence() },
+                onDismiss = { viewModel.onShowRecurrenceDialog(false) }
+            )
+        }
+
+        // 阻塞提示对话框
+        if (uiState.showDependencyBlockedDialog) {
+            AlertDialog(
+                onDismissRequest = { viewModel.onShowDependencyBlockedDialog(false) },
+                title = { Text(context.getString(AppR.string.cannot_start_task)) },
+                text = {
+                    Column {
+                        Text(context.getString(AppR.string.blocking_tasks_hint))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        (uiState.dependencyState as? com.ledger.task.domain.DependencyState.Blocked)
+                            ?.blockingTasks?.forEach { task ->
+                                Row(
+                                    modifier = Modifier.padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .background(com.ledger.task.ui.theme.StatusOverdue, CircleShape)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(task.title)
+                                }
+                            }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.onShowDependencyBlockedDialog(false) }) {
+                        Text(context.getString(AppR.string.got_it))
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -1187,6 +1308,301 @@ private fun CategorySelectionDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text("关闭")
+            }
+        }
+    )
+}
+
+/**
+ * 循环任务设置区域
+ */
+@Composable
+private fun RecurrenceSection(
+    recurrence: Recurrence?,
+    onShowDialog: () -> Unit,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = ElevatedBackground)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // 标题行
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "循环任务",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                if (recurrence != null) {
+                    // 清除按钮
+                    TextButton(onClick = onClear) {
+                        Text("清除", color = TextMuted)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (recurrence != null) {
+                // 显示当前循环设置
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(SurfaceBackground)
+                        .clickable { onShowDialog() }
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Replay,
+                            contentDescription = null,
+                            tint = Accent,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = recurrence.displayText(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "编辑",
+                        tint = TextMuted,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            } else {
+                // 添加循环按钮
+                Surface(
+                    onClick = onShowDialog,
+                    shape = RoundedCornerShape(8.dp),
+                    color = SurfaceBackground
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            tint = TextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "设置循环",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextMuted
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 循环任务设置对话框
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RecurrenceDialog(
+    recurrence: Recurrence?,
+    onTypeChange: (RecurrenceType) -> Unit,
+    onIntervalChange: (Int) -> Unit,
+    onDayOfWeekToggle: (java.time.DayOfWeek) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val currentType = recurrence?.type ?: RecurrenceType.DAILY
+    val currentInterval = recurrence?.interval ?: 1
+    val currentDaysOfWeek = recurrence?.daysOfWeek ?: emptySet()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("设置循环") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // 循环类型选择
+                Text(
+                    text = "重复方式",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextMuted
+                )
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    RecurrenceType.entries.forEach { type ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (currentType == type) AccentDim
+                                    else SurfaceBackground
+                                )
+                                .clickable { onTypeChange(type) }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = when (type) {
+                                    RecurrenceType.DAILY -> "每天"
+                                    RecurrenceType.WEEKLY -> "每周"
+                                    RecurrenceType.MONTHLY -> "每月"
+                                    RecurrenceType.YEARLY -> "每年"
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (currentType == type) Accent else MaterialTheme.colorScheme.onSurface
+                            )
+                            if (currentType == type) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Accent,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 间隔设置
+                if (currentType != RecurrenceType.YEARLY) {
+                    Column {
+                        Text(
+                            text = "间隔",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextMuted
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // 减少按钮
+                            IconButton(
+                                onClick = { onIntervalChange(currentInterval - 1) },
+                                enabled = currentInterval > 1
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "减少",
+                                    tint = if (currentInterval > 1) Accent else TextMuted
+                                )
+                            }
+
+                            Text(
+                                text = "$currentInterval ${when (currentType) {
+                                    RecurrenceType.DAILY -> "天"
+                                    RecurrenceType.WEEKLY -> "周"
+                                    RecurrenceType.MONTHLY -> "月"
+                                    RecurrenceType.YEARLY -> "年"
+                                }}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            // 增加按钮
+                            IconButton(
+                                onClick = { onIntervalChange(currentInterval + 1) },
+                                enabled = currentInterval < 99
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowUp,
+                                    contentDescription = "增加",
+                                    tint = if (currentInterval < 99) Accent else TextMuted
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 周几选择（仅周循环）
+                if (currentType == RecurrenceType.WEEKLY) {
+                    Column {
+                        Text(
+                            text = "重复日期",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextMuted
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            val dayLabels = listOf("一", "二", "三", "四", "五", "六", "日")
+                            val days = listOf(
+                                java.time.DayOfWeek.MONDAY,
+                                java.time.DayOfWeek.TUESDAY,
+                                java.time.DayOfWeek.WEDNESDAY,
+                                java.time.DayOfWeek.THURSDAY,
+                                java.time.DayOfWeek.FRIDAY,
+                                java.time.DayOfWeek.SATURDAY,
+                                java.time.DayOfWeek.SUNDAY
+                            )
+                            days.forEachIndexed { index, day ->
+                                val isSelected = day in currentDaysOfWeek
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (isSelected) Accent
+                                            else SurfaceBackground
+                                        )
+                                        .clickable { onDayOfWeekToggle(day) }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = dayLabels[index],
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if (isSelected) Color.White else TextMuted
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("确定")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
             }
         }
     )

@@ -55,4 +55,16 @@
     <string name="select_file">选择文件</string>
     <string name="all">全部</string>
     <string name="all_statuses">全部状态</string>
+
+    <!-- 依赖验证 -->
+    <string name="blocked">被阻塞</string>
+    <string name="blocked_hint">存在未完成的前置依赖，无法开始任务</string>
+    <string name="cannot_add_dependency">无法添加依赖</string>
+    <string name="self_reference_error">任务不能依赖自身</string>
+    <string name="cycle_dependency_error">检测到循环依赖，将形成闭环</string>
+    <string name="predecessor_not_found">前置任务不存在</string>
+    <string name="unknown_error">未知错误</string>
+    <string name="cannot_start_task">无法开始任务</string>
+    <string name="blocking_tasks_hint">以下前置依赖尚未完成：</string>
+    <string name="got_it">知道了</string>
 </resources>
