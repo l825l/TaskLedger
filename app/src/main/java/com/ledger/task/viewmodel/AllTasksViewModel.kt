@@ -1,5 +1,6 @@
 package com.ledger.task.viewmodel
 
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ledger.task.domain.model.AllTasksFilterState
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -29,7 +31,9 @@ data class AllTasksUiState(
     val tasks: List<Task> = emptyList(),
     val filterState: AllTasksFilterState = AllTasksFilterState(),
     val searchQuery: String = "",
-    val allTags: List<Tag> = emptyList()
+    val allTags: List<Tag> = emptyList(),
+    // 任务标签映射：taskId -> (标签名称, 标签颜色)
+    val taskTags: Map<Long, Pair<String, Color>> = emptyMap()
 )
 
 /**
@@ -109,11 +113,23 @@ class AllTasksViewModel(
                             }
                     )
 
+                    // 加载每个任务的第一个标签（用于显示在任务卡片上）
+                    val taskTagsMap = mutableMapOf<Long, Pair<String, Color>>()
+                    filtered.forEach { task ->
+                        // 获取任务的标签（只取第一个用于显示）
+                        val taskTags = tagRepository.getTagsForTask(task.id).firstOrNull() ?: emptyList()
+                        if (taskTags.isNotEmpty()) {
+                            val firstTag = taskTags.first()
+                            taskTagsMap[task.id] = Pair(firstTag.name, firstTag.color)
+                        }
+                    }
+
                     AllTasksUiState(
                         tasks = filtered,
                         filterState = filter,
                         searchQuery = query,
-                        allTags = tags
+                        allTags = tags,
+                        taskTags = taskTagsMap
                     )
                 }
             }.collect { result ->

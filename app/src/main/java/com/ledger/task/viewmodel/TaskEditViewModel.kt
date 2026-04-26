@@ -109,11 +109,21 @@ class TaskEditViewModel(
 
     /**
      * 加载所有标签
+     * 如果标签为空，会延迟重试（等待默认标签创建完成）
      */
     private fun loadAllTags() {
         viewModelScope.launch {
+            var retryCount = 0
+            val maxRetries = 3
+
             getAllTagsUseCase().collect { tags ->
                 _uiState.value = _uiState.value.copy(allTags = tags)
+
+                // 如果标签为空且未达到最大重试次数，延迟重试
+                if (tags.isEmpty() && retryCount < maxRetries) {
+                    retryCount++
+                    kotlinx.coroutines.delay(500L * retryCount) // 递增延迟
+                }
             }
         }
     }
