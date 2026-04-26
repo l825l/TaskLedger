@@ -9,17 +9,24 @@ import com.ledger.task.data.local.MIGRATION_6_7
 import com.ledger.task.data.local.MIGRATION_7_8
 import com.ledger.task.data.local.MIGRATION_8_9
 import com.ledger.task.data.local.SqlCipherSupportFactory
+import com.ledger.task.data.local.TagDao
+import com.ledger.task.data.repository.TagRepositoryImpl
 import com.ledger.task.data.repository.TaskRepositoryImpl
+import com.ledger.task.domain.repository.TagRepository
 import com.ledger.task.domain.repository.TaskRepository
 import com.ledger.task.domain.usecase.CompleteTaskUseCase
+import com.ledger.task.domain.usecase.DeleteTagUseCase
 import com.ledger.task.domain.usecase.DeleteTaskUseCase
+import com.ledger.task.domain.usecase.GetAllTagsUseCase
 import com.ledger.task.domain.usecase.GetAllTasksUseCase
 import com.ledger.task.domain.usecase.GetPredecessorTasksUseCase
 import com.ledger.task.domain.usecase.GetPriorityTasksUseCase
 import com.ledger.task.domain.usecase.GetRelatedTasksUseCase
+import com.ledger.task.domain.usecase.GetTagStatsUseCase
 import com.ledger.task.domain.usecase.GetTaskUseCase
 import com.ledger.task.domain.usecase.GetTodayTasksUseCase
 import com.ledger.task.domain.usecase.QuickCompleteTaskUseCase
+import com.ledger.task.domain.usecase.SaveTagUseCase
 import com.ledger.task.domain.usecase.SaveTaskUseCase
 import com.ledger.task.domain.usecase.UndoCompleteTaskUseCase
 import com.ledger.task.domain.usecase.ValidateDependencyUseCase
@@ -50,9 +57,11 @@ val appModule = module {
     }
     single { get<AppDatabase>().taskDao() }
     single { get<AppDatabase>().subTaskDao() }
+    single { get<AppDatabase>().tagDao() }
 
     // Repository
     single<TaskRepository> { TaskRepositoryImpl(get(), get()) }
+    single<TagRepository> { TagRepositoryImpl(get()) }
 }
 
 /**
@@ -71,6 +80,12 @@ val useCaseModule = module {
     factory { UndoCompleteTaskUseCase(get()) }
     factory { CompleteTaskUseCase(get()) }
     // ValidateDependencyUseCase 需要 TaskDependencyValidator，暂时跳过
+
+    // Tag UseCases
+    factory { GetAllTagsUseCase(get()) }
+    factory { SaveTagUseCase(get()) }
+    factory { DeleteTagUseCase(get()) }
+    factory { GetTagStatsUseCase(get()) }
 }
 
 /**
