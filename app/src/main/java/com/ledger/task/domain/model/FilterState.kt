@@ -11,7 +11,8 @@ data class AllTasksFilterState(
     val priority: Priority? = null,
     val status: DisplayStatus? = null,  // 使用 DisplayStatus 支持已逾期筛选
     val hasImage: Boolean? = null,
-    val quickTag: QuickTag? = null  // 快捷标签筛选
+    val quickTag: QuickTag? = null,  // 快捷标签筛选
+    val tagId: Long? = null  // 标签筛选
 )
 
 /**

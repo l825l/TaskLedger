@@ -15,6 +15,7 @@ import com.ledger.task.domain.model.RecurrenceType
 import com.ledger.task.domain.model.RichContent
 import com.ledger.task.domain.model.RichTextItem
 import com.ledger.task.domain.model.SubTask
+import com.ledger.task.domain.model.Tag
 import com.ledger.task.domain.model.Task
 import com.ledger.task.domain.model.TaskStatus
 import com.ledger.task.domain.DependencyState
@@ -22,6 +23,7 @@ import com.ledger.task.domain.DependencyValidationResult
 import com.ledger.task.domain.TaskDependencyValidator
 import com.ledger.task.domain.repository.TaskRepository
 import com.ledger.task.domain.usecase.CompleteTaskUseCase
+import com.ledger.task.domain.usecase.GetAllTagsUseCase
 import com.ledger.task.notification.ReminderManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -77,13 +79,17 @@ data class TaskEditUiState(
     val recurrence: Recurrence? = null,
     val showRecurrenceDialog: Boolean = false,
     // 子任务
-    val subTasks: List<SubTask> = emptyList()
+    val subTasks: List<SubTask> = emptyList(),
+    // 标签
+    val allTags: List<Tag> = emptyList(),
+    val selectedTagIds: List<Long> = emptyList()
 )
 
 class TaskEditViewModel(
     application: Application,
     private val repository: TaskRepository,
-    private val completeTaskUseCase: CompleteTaskUseCase
+    private val completeTaskUseCase: CompleteTaskUseCase,
+    private val getAllTagsUseCase: GetAllTagsUseCase
 ) : AndroidViewModel(application) {
 
     private val dependencyValidator = TaskDependencyValidator(repository)
@@ -93,6 +99,35 @@ class TaskEditViewModel(
 
     // 缓存可用任务列表，避免重复查询数据库
     private var cachedAvailableTasks: List<Task>? = null
+
+    init {
+        // 加载所有标签
+        loadAllTags()
+    }
+
+    /**
+     * 加载所有标签
+     */
+    private fun loadAllTags() {
+        viewModelScope.launch {
+            getAllTagsUseCase().collect { tags ->
+                _uiState.value = _uiState.value.copy(allTags = tags)
+            }
+        }
+    }
+
+    /**
+     * 切换标签选择状态
+     */
+    fun toggleTag(tagId: Long) {
+        val currentIds = _uiState.value.selectedTagIds
+        val newIds = if (tagId in currentIds) {
+            currentIds - tagId
+        } else {
+            currentIds + tagId
+        }
+        _uiState.value = _uiState.value.copy(selectedTagIds = newIds)
+    }
 
     fun loadTask(taskId: Long) {
         if (taskId <= 0) {

@@ -10,6 +10,7 @@ import com.ledger.task.domain.model.LedgerFilterState
 import com.ledger.task.domain.model.Task
 import com.ledger.task.domain.model.TimeRange
 import com.ledger.task.domain.repository.TaskRepository
+import com.ledger.task.ui.component.TagStatItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,7 +69,9 @@ data class LedgerCenterUiState(
     val autoBackupHour: Int = 2,
     val autoBackupMinute: Int = 0,
     val autoBackupNextTime: String = "未启用",
-    val autoBackupFiles: List<String> = emptyList()
+    val autoBackupFiles: List<String> = emptyList(),
+    // 标签统计
+    val tagStats: List<TagStatItem> = emptyList()
 )
 
 /**

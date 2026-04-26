@@ -96,6 +96,7 @@ import com.ledger.task.ui.component.RelatedTasksContainer
 import com.ledger.task.ui.component.RichTextEditor
 import com.ledger.task.ui.component.StatusTag
 import com.ledger.task.ui.component.SubTaskList
+import com.ledger.task.ui.component.TagSelector
 import com.ledger.task.ui.component.TaskRelationDialog
 import com.ledger.task.domain.model.Recurrence
 import com.ledger.task.domain.model.RecurrenceType
@@ -572,6 +573,33 @@ fun TaskEditScreen(
                                 )
                             }
                         }
+
+                        // 标签选择
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "标签",
+                                color = TextMuted,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                            // 显示已选标签数量
+                            if (uiState.selectedTagIds.isNotEmpty()) {
+                                Text(
+                                    text = "已选 ${uiState.selectedTagIds.size} 个",
+                                    color = Accent,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                        TagSelector(
+                            allTags = uiState.allTags,
+                            selectedTagIds = uiState.selectedTagIds,
+                            onTagToggle = { viewModel.toggleTag(it) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
 

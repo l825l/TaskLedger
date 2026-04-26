@@ -92,10 +92,10 @@ val useCaseModule = module {
  * ViewModel 模块
  */
 val viewModelModule = module {
-    viewModel { TaskEditViewModel(androidContext() as android.app.Application, get(), get()) }
+    viewModel { TaskEditViewModel(androidContext() as android.app.Application, get(), get(), get()) }
     viewModel { TodayTasksViewModel(get(), get()) }
     viewModel { PriorityTasksViewModel(get(), get()) }
-    viewModel { AllTasksViewModel(get()) }
+    viewModel { AllTasksViewModel(get(), get(), get()) }
     viewModel { LedgerCenterViewModel(androidContext() as android.app.Application, get()) }
     viewModel { SettingsViewModel(androidContext() as android.app.Application, get(), get()) }
     viewModel { UpdateViewModel(androidContext() as android.app.Application) }

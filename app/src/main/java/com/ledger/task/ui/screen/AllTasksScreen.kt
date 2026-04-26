@@ -43,6 +43,7 @@ import com.ledger.task.ui.component.ActiveFiltersChip
 import com.ledger.task.ui.component.PriorityBadge
 import com.ledger.task.ui.component.StatusTag
 import com.ledger.task.ui.component.CategoryTag
+import com.ledger.task.ui.component.TagFilterBar
 import com.ledger.task.ui.theme.getDeepBackground
 import com.ledger.task.ui.theme.getElevatedBackground
 import com.ledger.task.ui.theme.getSurfaceBackground
@@ -90,18 +91,22 @@ fun AllTasksScreen(
             status = uiState.filterState.status,
             hasImage = uiState.filterState.hasImage,
             quickTag = uiState.filterState.quickTag,
+            tagId = uiState.filterState.tagId,
+            allTags = uiState.allTags,
             onSearchChange = viewModel::onSearchChange,
             onCategoryChange = viewModel::onCategoryFilterChange,
             onPriorityChange = viewModel::onPriorityFilterChange,
             onStatusChange = viewModel::onStatusFilterChange,
             onHasImageChange = viewModel::onHasImageFilterChange,
             onQuickTagChange = viewModel::onQuickTagFilterChange,
+            onTagChange = viewModel::onTagFilterChange,
             onClearAllFilters = {
                 viewModel.onCategoryFilterChange(null)
                 viewModel.onPriorityFilterChange(null)
                 viewModel.onStatusFilterChange(null)
                 viewModel.onHasImageFilterChange(null)
                 viewModel.onQuickTagFilterChange(null)
+                viewModel.onTagFilterChange(null)
             }
         )
 
@@ -157,12 +162,15 @@ private fun FilterPanel(
     status: DisplayStatus?,
     hasImage: Boolean?,
     quickTag: QuickTag?,
+    tagId: Long?,
+    allTags: List<com.ledger.task.domain.model.Tag>,
     onSearchChange: (String) -> Unit,
     onCategoryChange: (String?) -> Unit,
     onPriorityChange: (Priority?) -> Unit,
     onStatusChange: (DisplayStatus?) -> Unit,
     onHasImageChange: (Boolean?) -> Unit,
     onQuickTagChange: (QuickTag?) -> Unit,
+    onTagChange: (Long?) -> Unit,
     onClearAllFilters: () -> Unit
 ) {
     Column(
@@ -194,6 +202,15 @@ private fun FilterPanel(
             onHasImageChange = onHasImageChange,
             onQuickTagChange = onQuickTagChange
         )
+
+        // 标签筛选栏
+        if (allTags.isNotEmpty()) {
+            TagFilterBar(
+                tags = allTags,
+                selectedTagId = tagId,
+                onTagSelected = onTagChange
+            )
+        }
 
         // 清除筛选按钮
         ActiveFiltersChip(

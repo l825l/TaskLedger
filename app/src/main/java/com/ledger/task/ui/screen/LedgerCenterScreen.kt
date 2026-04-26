@@ -70,6 +70,8 @@ import com.ledger.task.domain.model.Task
 import com.ledger.task.domain.model.TaskStatus
 import com.ledger.task.domain.model.TimeRange
 import com.ledger.task.ui.component.DraggableFloatingActionButton
+import com.ledger.task.ui.component.TagStatsCard
+import com.ledger.task.ui.component.TaskStatisticsChart
 import com.ledger.task.ui.theme.getDeepBackground
 import com.ledger.task.ui.theme.getElevatedBackground
 import com.ledger.task.ui.theme.getSurfaceBackground
@@ -199,9 +201,15 @@ fun LedgerCenterScreen(
                 )
             }
 
-            // 任务统计
-            TaskStatisticsSection(
+            // 任务统计图表
+            TaskStatisticsChart(
                 tasks = uiState.tasks,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // 标签统计卡片
+            TagStatsCard(
+                tagStats = uiState.tagStats,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -402,7 +410,7 @@ fun LedgerCenterScreen(
                         title = "验证身份",
                         subtitle = "请使用指纹或面容验证以恢复数据",
                         negativeButtonText = "使用密码",
-                        onSuccess = { result ->
+                        onSuccess = { _ ->
                             viewModel.performRestoreWithBiometric()
                         },
                         onError = { _, _ ->
@@ -439,7 +447,7 @@ fun LedgerCenterScreen(
                         title = "验证身份",
                         subtitle = "请使用指纹或面容验证以关闭生物识别",
                         negativeButtonText = "取消",
-                        onSuccess = { result ->
+                        onSuccess = { _ ->
                             viewModel.performDisableBiometricAccess()
                         },
                         onError = { _, _ ->
@@ -713,63 +721,6 @@ private fun CategoryFilterSection(
 }
 
 /**
- * 任务统计区域
- */
-@Composable
-private fun TaskStatisticsSection(
-    tasks: List<Task>,
-    modifier: Modifier = Modifier
-) {
-    val totalCount = tasks.size
-    val doneCount = tasks.count { it.status == TaskStatus.DONE }
-    val pendingCount = totalCount - doneCount
-
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = getSurfaceBackground())
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "统计信息",
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
-                StatItem(label = "总计", value = totalCount.toString())
-                StatItem(label = "已完成", value = doneCount.toString())
-                StatItem(label = "未完成", value = pendingCount.toString())
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatItem(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.headlineSmall,
-            fontFamily = FontFamily.Monospace
-        )
-        Text(
-            text = label,
-            color = getTextMuted(),
-            style = MaterialTheme.typography.labelSmall
-        )
-    }
-}
-
-/**
  * 导出区域
  */
 @Composable
@@ -835,6 +786,7 @@ private fun ExportSection(
 /**
  * 导出选项对话框
  */
+@Suppress("UNUSED_PARAMETER")
 @Composable
 private fun ExportDialog(
     onDismiss: () -> Unit,
