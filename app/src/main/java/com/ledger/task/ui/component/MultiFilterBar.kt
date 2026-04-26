@@ -1,18 +1,13 @@
 package com.ledger.task.ui.component
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,7 +16,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -34,14 +28,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.PopupProperties
-import androidx.compose.foundation.layout.size
-import com.ledger.task.domain.model.DefaultCategories
 import com.ledger.task.domain.model.DisplayStatus
 import com.ledger.task.domain.model.Priority
 import com.ledger.task.domain.model.QuickTag
-import com.ledger.task.ui.theme.getBorderDim
 import com.ledger.task.ui.theme.getDeepBackground
 import com.ledger.task.ui.theme.getElevatedBackground
 import com.ledger.task.ui.theme.getSurfaceBackground
@@ -49,16 +39,14 @@ import com.ledger.task.ui.theme.getTextMuted
 
 /**
  * 多维筛选器组件
- * 支持分类、优先级、状态、是否含图片、快捷标签组合筛选
+ * 支持优先级、状态、是否含图片、快捷标签组合筛选
  */
 @Composable
 fun MultiFilterBar(
-    category: String?,
     priority: Priority?,
     status: DisplayStatus?,
     hasImage: Boolean?,
     quickTag: QuickTag?,
-    onCategoryChange: (String?) -> Unit,
     onPriorityChange: (Priority?) -> Unit,
     onStatusChange: (DisplayStatus?) -> Unit,
     onHasImageChange: (Boolean?) -> Unit,
@@ -70,14 +58,6 @@ fun MultiFilterBar(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 分类筛选器
-        FilterDropdown(
-            label = "分类",
-            value = category,
-            options = listOf(null to "全部") + DefaultCategories.defaultTree.getAllNodes().map { it.id to it.name },
-            onValueChange = onCategoryChange
-        )
-
         // 优先级筛选器
         FilterDropdown(
             label = "优先级",
@@ -207,7 +187,6 @@ private fun <T> FilterDropdown(
  */
 @Composable
 fun ActiveFiltersChip(
-    category: String?,
     priority: Priority?,
     status: DisplayStatus?,
     hasImage: Boolean?,
@@ -215,7 +194,7 @@ fun ActiveFiltersChip(
     onClearAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val hasActiveFilters = category != null || priority != null || status != null || hasImage != null || quickTag != null
+    val hasActiveFilters = priority != null || status != null || hasImage != null || quickTag != null
 
     if (hasActiveFilters) {
         Surface(

@@ -42,7 +42,6 @@ import com.ledger.task.ui.component.MultiFilterBar
 import com.ledger.task.ui.component.ActiveFiltersChip
 import com.ledger.task.ui.component.PriorityBadge
 import com.ledger.task.ui.component.StatusTag
-import com.ledger.task.ui.component.CategoryTag
 import com.ledger.task.ui.component.TagFilterBar
 import com.ledger.task.ui.theme.getDeepBackground
 import com.ledger.task.ui.theme.getElevatedBackground
@@ -86,7 +85,6 @@ fun AllTasksScreen(
         // 筛选器面板
         FilterPanel(
             searchQuery = uiState.searchQuery,
-            category = uiState.filterState.category,
             priority = uiState.filterState.priority,
             status = uiState.filterState.status,
             hasImage = uiState.filterState.hasImage,
@@ -94,14 +92,12 @@ fun AllTasksScreen(
             tagId = uiState.filterState.tagId,
             allTags = uiState.allTags,
             onSearchChange = viewModel::onSearchChange,
-            onCategoryChange = viewModel::onCategoryFilterChange,
             onPriorityChange = viewModel::onPriorityFilterChange,
             onStatusChange = viewModel::onStatusFilterChange,
             onHasImageChange = viewModel::onHasImageFilterChange,
             onQuickTagChange = viewModel::onQuickTagFilterChange,
             onTagChange = viewModel::onTagFilterChange,
             onClearAllFilters = {
-                viewModel.onCategoryFilterChange(null)
                 viewModel.onPriorityFilterChange(null)
                 viewModel.onStatusFilterChange(null)
                 viewModel.onHasImageFilterChange(null)
@@ -157,7 +153,6 @@ fun AllTasksScreen(
 @Composable
 private fun FilterPanel(
     searchQuery: String,
-    category: String?,
     priority: Priority?,
     status: DisplayStatus?,
     hasImage: Boolean?,
@@ -165,7 +160,6 @@ private fun FilterPanel(
     tagId: Long?,
     allTags: List<com.ledger.task.domain.model.Tag>,
     onSearchChange: (String) -> Unit,
-    onCategoryChange: (String?) -> Unit,
     onPriorityChange: (Priority?) -> Unit,
     onStatusChange: (DisplayStatus?) -> Unit,
     onHasImageChange: (Boolean?) -> Unit,
@@ -191,12 +185,10 @@ private fun FilterPanel(
 
         // 多维筛选器
         MultiFilterBar(
-            category = category,
             priority = priority,
             status = status,
             hasImage = hasImage,
             quickTag = quickTag,
-            onCategoryChange = onCategoryChange,
             onPriorityChange = onPriorityChange,
             onStatusChange = onStatusChange,
             onHasImageChange = onHasImageChange,
@@ -214,7 +206,6 @@ private fun FilterPanel(
 
         // 清除筛选按钮
         ActiveFiltersChip(
-            category = category,
             priority = priority,
             status = status,
             hasImage = hasImage,
@@ -356,8 +347,6 @@ private fun TaskRow(
                         modifier = Modifier.weight(1f)
                     )
                 }
-                // 分类标签（右侧，与上方状态标签垂直对齐）
-                CategoryTag(category = task.category)
             }
         }
     }
