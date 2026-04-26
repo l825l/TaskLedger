@@ -22,7 +22,7 @@ fun TagSelector(
 ) {
     if (allTags.isEmpty()) {
         Text(
-            text = "暂无标签，请先创建标签",
+            text = "暂无标签，请前往台账中心创建标签",
             color = getTextMuted(),
             modifier = modifier.padding(8.dp)
         )

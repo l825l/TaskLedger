@@ -284,6 +284,7 @@ fun TodayTasksScreen(
                                             currentlySwipedTaskId = -1L
                                         }
                                     },
+                                    tagInfo = uiState.taskTags[task.id],
                                     modifier = Modifier
                                 )
                             }
@@ -328,6 +329,7 @@ fun TodayTasksScreen(
                                             currentlySwipedTaskId = -1L
                                         }
                                     },
+                                    tagInfo = uiState.taskTags[task.id],
                                     modifier = Modifier
                                 )
                             }

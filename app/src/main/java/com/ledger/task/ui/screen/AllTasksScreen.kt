@@ -290,28 +290,9 @@ private fun TaskRow(
                     modifier = Modifier.weight(1f)
                 )
                 StatusTag(displayStatus = task.displayStatus)
-
-                // 标签信息（如果有）
-                if (tagInfo != null) {
-                    val tagColor = androidx.compose.ui.graphics.Color(tagInfo.second)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(tagColor.copy(alpha = 0.2f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = tagInfo.first,
-                            color = tagColor,
-                            fontSize = 10.sp,
-                            maxLines = 1
-                        )
-                    }
-                }
             }
 
-            // 时间信息 + 分类标签（与上方状态标签垂直对齐）
+            // 时间信息
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -369,6 +350,30 @@ private fun TaskRow(
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier.weight(1f)
                     )
+                }
+            }
+
+            // 标签信息（单独一行，右对齐）
+            if (tagInfo != null) {
+                val tagColor = androidx.compose.ui.graphics.Color(tagInfo.second)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(tagColor.copy(alpha = 0.2f))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = tagInfo.first,
+                            color = tagColor,
+                            fontSize = 11.sp,
+                            maxLines = 1
+                        )
+                    }
                 }
             }
         }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ledger.task.domain.model.Priority
 import com.ledger.task.domain.model.Task
 import com.ledger.task.domain.model.TaskStatus
+import com.ledger.task.domain.repository.TagRepository
 import com.ledger.task.domain.repository.TaskRepository
 import com.ledger.task.domain.usecase.CompleteTaskUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +26,9 @@ data class TodayTasksUiState(
     val tasks: List<Task> = emptyList(),
     val isSorting: Boolean = false,
     val completedCount: Int = 0,
-    val totalCount: Int = 0
+    val totalCount: Int = 0,
+    // 任务标签映射：taskId -> (标签名称, 标签颜色ARGB值)
+    val taskTags: Map<Long, Pair<String, Int>> = emptyMap()
 )
 
 /**
@@ -33,6 +36,7 @@ data class TodayTasksUiState(
  */
 class TodayTasksViewModel(
     private val repository: TaskRepository,
+    private val tagRepository: TagRepository,
     private val completeTaskUseCase: CompleteTaskUseCase
 ) : ViewModel() {
 
@@ -48,11 +52,19 @@ class TodayTasksViewModel(
 
         repository.getTodayTasks(todayStart, todayEnd)
             .map { tasks ->
+                // 批量获取任务标签
+                val taskIds = tasks.map { it.id }
+                val taskTagsList = tagRepository.getFirstTagForTasks(taskIds)
+                val taskTagsMap = taskTagsList.associate { info ->
+                    info.taskId to Pair(info.tagName, info.tagColorArgb)
+                }
+
                 TodayTasksUiState(
                     tasks = tasks,
                     isSorting = _isSorting.value,
                     completedCount = tasks.count { it.status == TaskStatus.DONE },
-                    totalCount = tasks.size
+                    totalCount = tasks.size,
+                    taskTags = taskTagsMap
                 )
             }
             .stateIn(

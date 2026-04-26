@@ -1,6 +1,7 @@
 package com.ledger.task.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,15 +32,22 @@ fun TagChip(
     onDeleteClick: (() -> Unit)? = null
 ) {
     val backgroundColor = if (selected) {
-        tag.color.copy(alpha = 0.3f)
+        tag.color.copy(alpha = 0.25f)
     } else {
-        tag.color.copy(alpha = 0.15f)
+        tag.color.copy(alpha = 0.1f)
+    }
+
+    val borderModifier = if (selected) {
+        Modifier.border(2.dp, tag.color, RoundedCornerShape(16.dp))
+    } else {
+        Modifier.border(1.dp, tag.color.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
     }
 
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .background(backgroundColor)
+            .then(borderModifier)
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -53,7 +61,7 @@ fun TagChip(
         Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = tag.name,
-            color = tag.color,
+            color = if (selected) tag.color else tag.color.copy(alpha = 0.8f),
             fontSize = 13.sp
         )
         if (showDelete && onDeleteClick != null) {

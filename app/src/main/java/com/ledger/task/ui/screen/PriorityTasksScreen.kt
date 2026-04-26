@@ -38,6 +38,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -169,7 +171,8 @@ fun PriorityTasksScreen(
                                     } else if (currentlySwipedTaskId == task.id) {
                                         currentlySwipedTaskId = -1L
                                     }
-                                }
+                                },
+                                tagInfo = uiState.taskTags[task.id]
                             )
                         }
                     }
@@ -210,7 +213,8 @@ private fun SwipeablePriorityTaskRow(
     onPriorityDowngrade: () -> Unit,
     onDelete: () -> Unit = {},
     isCurrentlySwiped: Boolean = false,
-    onSwipeStateChanged: (Boolean) -> Unit = {}
+    onSwipeStateChanged: (Boolean) -> Unit = {},
+    tagInfo: Pair<String, Int>? = null  // (标签名称, 标签颜色ARGB值)
 ) {
     val density = LocalDensity.current
 
@@ -576,7 +580,7 @@ private fun SwipeablePriorityTaskRow(
                     StatusTag(displayStatus = task.displayStatus)
                 }
 
-                // 时间信息 + 分类标签（与上方状态标签垂直对齐）
+                // 时间信息
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -625,8 +629,30 @@ private fun SwipeablePriorityTaskRow(
                             modifier = Modifier.weight(1f)
                         )
                     }
-                    // 分类标签（右侧，与上方状态标签垂直对齐）
-                    CategoryTag(category = task.category)
+                }
+
+                // 标签信息（单独一行，右对齐）
+                if (tagInfo != null) {
+                    val tagColor = androidx.compose.ui.graphics.Color(tagInfo.second)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(tagColor.copy(alpha = 0.2f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = tagInfo.first,
+                                color = tagColor,
+                                fontSize = 11.sp,
+                                maxLines = 1
+                            )
+                        }
+                    }
                 }
             }
         }
