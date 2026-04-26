@@ -24,6 +24,7 @@ import com.ledger.task.domain.TaskDependencyValidator
 import com.ledger.task.domain.repository.TaskRepository
 import com.ledger.task.domain.usecase.CompleteTaskUseCase
 import com.ledger.task.domain.usecase.GetAllTagsUseCase
+import com.ledger.task.domain.repository.TagRepository
 import com.ledger.task.notification.ReminderManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -89,7 +90,8 @@ class TaskEditViewModel(
     application: Application,
     private val repository: TaskRepository,
     private val completeTaskUseCase: CompleteTaskUseCase,
-    private val getAllTagsUseCase: GetAllTagsUseCase
+    private val getAllTagsUseCase: GetAllTagsUseCase,
+    private val tagRepository: TagRepository
 ) : AndroidViewModel(application) {
 
     private val dependencyValidator = TaskDependencyValidator(repository)
@@ -144,6 +146,8 @@ class TaskEditViewModel(
             val dependencyState = com.ledger.task.domain.DependencyStateCalculator.calculate(predecessorTasks)
             // 加载子任务
             val subTasks = repository.getSubTasksNow(taskId)
+            // 加载任务关联的标签
+            val tagIds = tagRepository.getTagsForTask(taskId).firstOrNull()?.map { it.id } ?: emptyList()
             _uiState.value = TaskEditUiState(
                 id = task.id,
                 title = task.title,
@@ -163,6 +167,7 @@ class TaskEditViewModel(
                 dependencyState = dependencyState,
                 recurrence = task.recurrence,
                 subTasks = subTasks,
+                selectedTagIds = tagIds,
                 isEdit = true
             )
         }
@@ -343,6 +348,12 @@ class TaskEditViewModel(
                 )
             } else {
                 ReminderManager.cancelReminder(getApplication(), taskId)
+            }
+
+            // 保存标签关联
+            tagRepository.clearTaskTags(taskId)
+            state.selectedTagIds.forEach { tagId ->
+                tagRepository.addTagToTask(taskId, tagId)
             }
 
             _uiState.value = _uiState.value.copy(isSaving = false, saved = true)
