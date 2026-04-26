@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
@@ -70,6 +71,7 @@ import com.ledger.task.domain.model.Task
 import com.ledger.task.domain.model.TaskStatus
 import com.ledger.task.domain.model.TimeRange
 import com.ledger.task.ui.component.DraggableFloatingActionButton
+import com.ledger.task.ui.component.TagManagementDialog
 import com.ledger.task.ui.component.TagStatsCard
 import com.ledger.task.ui.component.TaskStatisticsChart
 import com.ledger.task.ui.theme.getDeepBackground
@@ -212,6 +214,20 @@ fun LedgerCenterScreen(
                 tagStats = uiState.tagStats,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            // 标签管理按钮
+            OutlinedButton(
+                onClick = { viewModel.showTagManagementDialog() },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Label,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("管理标签")
+            }
 
             // 导出区域
             ExportSection(
@@ -535,6 +551,18 @@ fun LedgerCenterScreen(
             title = "输入备份密码",
             passwordHint = uiState.passwordHint,
             error = uiState.backupPasswordError
+        )
+    }
+
+    // 标签管理对话框
+    if (uiState.showTagManagementDialog) {
+        TagManagementDialog(
+            tags = uiState.allTags,
+            tagTaskCounts = uiState.tagTaskCounts,
+            onDismiss = { viewModel.dismissTagManagementDialog() },
+            onCreateTag = { name, color -> viewModel.createTag(name, color) },
+            onUpdateTag = { tag -> viewModel.updateTag(tag) },
+            onDeleteTag = { tag -> viewModel.deleteTag(tag) }
         )
     }
 }

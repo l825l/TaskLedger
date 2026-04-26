@@ -9,7 +9,12 @@ import com.ledger.task.backup.AutoBackupScheduler
 import com.ledger.task.domain.model.LedgerFilterState
 import com.ledger.task.domain.model.Task
 import com.ledger.task.domain.model.TimeRange
+import com.ledger.task.domain.model.Tag
+import com.ledger.task.domain.repository.TagRepository
 import com.ledger.task.domain.repository.TaskRepository
+import com.ledger.task.domain.usecase.DeleteTagUseCase
+import com.ledger.task.domain.usecase.GetAllTagsUseCase
+import com.ledger.task.domain.usecase.SaveTagUseCase
 import com.ledger.task.ui.component.TagStatItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -71,7 +76,11 @@ data class LedgerCenterUiState(
     val autoBackupNextTime: String = "未启用",
     val autoBackupFiles: List<String> = emptyList(),
     // 标签统计
-    val tagStats: List<TagStatItem> = emptyList()
+    val tagStats: List<TagStatItem> = emptyList(),
+    // 标签管理
+    val allTags: List<Tag> = emptyList(),
+    val tagTaskCounts: Map<Long, Int> = emptyMap(),
+    val showTagManagementDialog: Boolean = false
 )
 
 /**
@@ -80,7 +89,11 @@ data class LedgerCenterUiState(
  */
 class LedgerCenterViewModel(
     private val application: Application,
-    private val repository: TaskRepository
+    private val repository: TaskRepository,
+    private val tagRepository: TagRepository,
+    private val getAllTagsUseCase: GetAllTagsUseCase,
+    private val saveTagUseCase: SaveTagUseCase,
+    private val deleteTagUseCase: DeleteTagUseCase
 ) : ViewModel(), KoinComponent {
 
     companion object {
@@ -127,6 +140,33 @@ class LedgerCenterViewModel(
         exportManager.loadExportHistory()
         loadLedgerData()
         loadBiometricAndAutoBackupSettings()
+        loadAllTags()
+    }
+
+    /**
+     * 加载所有标签
+     */
+    private fun loadAllTags() {
+        viewModelScope.launch {
+            getAllTagsUseCase().collect { tags ->
+                _uiState.value = _uiState.value.copy(allTags = tags)
+                // 加载每个标签的任务数量
+                loadTagTaskCounts(tags)
+            }
+        }
+    }
+
+    /**
+     * 加载标签任务数量
+     */
+    private suspend fun loadTagTaskCounts(tags: List<Tag>) {
+        val counts = mutableMapOf<Long, Int>()
+        tags.forEach { tag ->
+            tagRepository.getTaskCountForTag(tag.id).collect { count ->
+                counts[tag.id] = count
+            }
+        }
+        _uiState.value = _uiState.value.copy(tagTaskCounts = counts)
     }
 
     /**
@@ -391,6 +431,68 @@ class LedgerCenterViewModel(
 
     fun getAutoBackupFiles(): List<String> {
         return autoBackupSettingsManager.getAutoBackupFiles()
+    }
+
+    // ==================== 标签管理相关 ====================
+
+    /**
+     * 显示标签管理对话框
+     */
+    fun showTagManagementDialog() {
+        _uiState.value = _uiState.value.copy(showTagManagementDialog = true)
+    }
+
+    /**
+     * 隐藏标签管理对话框
+     */
+    fun dismissTagManagementDialog() {
+        _uiState.value = _uiState.value.copy(showTagManagementDialog = false)
+    }
+
+    /**
+     * 创建标签
+     */
+    fun createTag(name: String, color: androidx.compose.ui.graphics.Color) {
+        viewModelScope.launch {
+            val tag = Tag(name = name, color = color)
+            saveTagUseCase(tag)
+                .onSuccess {
+                    // 标签列表会自动更新通过 Flow
+                }
+                .onFailure { error ->
+                    Log.e(TAG, "创建标签失败", error)
+                }
+        }
+    }
+
+    /**
+     * 更新标签
+     */
+    fun updateTag(tag: Tag) {
+        viewModelScope.launch {
+            saveTagUseCase(tag)
+                .onSuccess {
+                    // 标签列表会自动更新通过 Flow
+                }
+                .onFailure { error ->
+                    Log.e(TAG, "更新标签失败", error)
+                }
+        }
+    }
+
+    /**
+     * 删除标签
+     */
+    fun deleteTag(tag: Tag) {
+        viewModelScope.launch {
+            deleteTagUseCase(tag)
+                .onSuccess {
+                    // 标签列表会自动更新通过 Flow
+                }
+                .onFailure { error ->
+                    Log.e(TAG, "删除标签失败", error)
+                }
+        }
     }
 
     override fun onCleared() {
