@@ -113,17 +113,23 @@ class TaskEditViewModel(
      */
     private fun loadAllTags() {
         viewModelScope.launch {
+            // 先尝试获取初始值，如果为空则延迟重试
+            var tags = getAllTagsUseCase().firstOrNull() ?: emptyList()
             var retryCount = 0
             val maxRetries = 3
 
-            getAllTagsUseCase().collect { tags ->
-                _uiState.value = _uiState.value.copy(allTags = tags)
+            while (tags.isEmpty() && retryCount < maxRetries) {
+                retryCount++
+                kotlinx.coroutines.delay(500L * retryCount)
+                tags = getAllTagsUseCase().firstOrNull() ?: emptyList()
+            }
 
-                // 如果标签为空且未达到最大重试次数，延迟重试
-                if (tags.isEmpty() && retryCount < maxRetries) {
-                    retryCount++
-                    kotlinx.coroutines.delay(500L * retryCount) // 递增延迟
-                }
+            // 更新初始状态
+            _uiState.value = _uiState.value.copy(allTags = tags)
+
+            // 然后持续监听标签变化
+            getAllTagsUseCase().collect { updatedTags ->
+                _uiState.value = _uiState.value.copy(allTags = updatedTags)
             }
         }
     }

@@ -5,6 +5,7 @@ import com.ledger.task.data.local.TagEntity
 import com.ledger.task.data.local.TaskTagCrossRef
 import com.ledger.task.domain.model.Tag
 import com.ledger.task.domain.repository.TagRepository
+import com.ledger.task.domain.repository.TaskTagInfo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -59,5 +60,16 @@ class TagRepositoryImpl(
 
     override suspend fun isNameExists(name: String, excludeId: Long): Boolean {
         return tagDao.isNameExists(name, excludeId)
+    }
+
+    override suspend fun getFirstTagForTasks(taskIds: List<Long>): List<TaskTagInfo> {
+        if (taskIds.isEmpty()) return emptyList()
+        return tagDao.getFirstTagForTasks(taskIds).map { result ->
+            TaskTagInfo(
+                taskId = result.taskId,
+                tagName = result.name,
+                tagColorArgb = result.colorArgb
+            )
+        }
     }
 }

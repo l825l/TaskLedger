@@ -7,6 +7,16 @@ import androidx.room.Delete
 import androidx.room.Query
 
 /**
+ * 任务第一个标签的查询结果
+ */
+data class TaskFirstTag(
+    val taskId: Long,
+    val tagId: Long,
+    val name: String,
+    val colorArgb: Int
+)
+
+/**
  * 标签数据访问对象
  */
 @Dao
@@ -60,4 +70,15 @@ interface TagDao {
     // 检查标签名称是否存在
     @Query("SELECT EXISTS(SELECT 1 FROM tags WHERE name = :name AND id != :excludeId)")
     suspend fun isNameExists(name: String, excludeId: Long = 0): Boolean
+
+    // 批量获取多个任务的第一个标签（用于任务卡片显示）
+    @Query("""
+        SELECT tt.taskId, t.id as tagId, t.name, t.colorArgb
+        FROM task_tags tt
+        INNER JOIN tags t ON tt.tagId = t.id
+        WHERE tt.taskId IN (:taskIds)
+        GROUP BY tt.taskId
+        HAVING tt.tagId = MIN(tt.tagId)
+    """)
+    suspend fun getFirstTagForTasks(taskIds: List<Long>): List<TaskFirstTag>
 }

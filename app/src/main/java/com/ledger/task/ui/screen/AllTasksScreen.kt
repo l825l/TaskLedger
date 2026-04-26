@@ -225,7 +225,7 @@ private fun TaskRow(
     index: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    tagInfo: Pair<String, androidx.compose.ui.graphics.Color>? = null
+    tagInfo: Pair<String, Int>? = null  // (标签名称, 标签颜色ARGB值)
 ) {
     val fullFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm")
     val isOverdue = task.displayStatus == DisplayStatus.OVERDUE
@@ -293,16 +293,17 @@ private fun TaskRow(
 
                 // 标签信息（如果有）
                 if (tagInfo != null) {
+                    val tagColor = androidx.compose.ui.graphics.Color(tagInfo.second)
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(tagInfo.second.copy(alpha = 0.2f))
+                            .background(tagColor.copy(alpha = 0.2f))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = tagInfo.first,
-                            color = tagInfo.second,
+                            color = tagColor,
                             fontSize = 10.sp,
                             maxLines = 1
                         )
