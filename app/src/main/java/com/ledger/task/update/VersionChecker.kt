@@ -6,6 +6,7 @@ import android.util.Log
 import com.ledger.task.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -15,6 +16,7 @@ import java.util.concurrent.TimeUnit
  * 版本检查器
  * 独立模块，不访问应用内数据
  */
+@OptIn(ExperimentalSerializationApi::class)
 class VersionChecker(private val context: Context) {
 
     private val json = Json {
