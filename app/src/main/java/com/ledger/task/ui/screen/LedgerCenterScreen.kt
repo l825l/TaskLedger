@@ -179,14 +179,15 @@ fun LedgerCenterScreen(
                 onShowEndDatePicker = { showEndDatePicker = true }
             )
 
-            // 分类筛选
-            CategoryFilterSection(
-                categories = uiState.allCategories,
-                selectedCategories = uiState.filterState.categories,
-                onToggle = viewModel::onCategoryToggle,
-                onSelectAll = viewModel::onSelectAllCategories,
-                onDeselectAll = viewModel::onDeselectAllCategories
-            )
+            // 标签筛选
+            if (uiState.allTags.isNotEmpty()) {
+                TagFilterSection(
+                    tags = uiState.allTags,
+                    selectedTagId = uiState.selectedTagId,
+                    onTagSelected = { viewModel.onTagFilterChange(it) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             // 包含已归档开关
             Row(
@@ -669,15 +670,13 @@ private fun TimeRangeSelectorSection(
 }
 
 /**
- * 分类筛选区域
+ * 标签筛选区域
  */
 @Composable
-private fun CategoryFilterSection(
-    categories: List<String>,
-    selectedCategories: Set<String>,
-    onToggle: (String) -> Unit,
-    onSelectAll: () -> Unit,
-    onDeselectAll: () -> Unit,
+private fun TagFilterSection(
+    tags: List<com.ledger.task.domain.model.Tag>,
+    selectedTagId: Long?,
+    onTagSelected: (Long?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -691,57 +690,38 @@ private fun CategoryFilterSection(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Text(
+                text = "标签筛选",
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium
+            )
+
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "分类筛选",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleMedium
+                // 全部标签
+                FilterChip(
+                    label = { Text("全部") },
+                    selected = selectedTagId == null,
+                    onClick = { onTagSelected(null) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = getElevatedBackground(),
+                        selectedLabelColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TextButton(onClick = onSelectAll) {
-                        Text("全选", style = MaterialTheme.typography.labelSmall)
-                    }
-                    TextButton(onClick = onDeselectAll) {
-                        Text("反选", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
 
-            if (categories.isEmpty()) {
-                Text(
-                    text = "暂无分类",
-                    color = getTextMuted(),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    categories.forEach { category ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onToggle(category) }
-                                .padding(vertical = 4.dp)
-                        ) {
-                            Checkbox(
-                                checked = selectedCategories.contains(category),
-                                onCheckedChange = { onToggle(category) }
-                            )
-                            Text(
-                                text = category,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
+                // 各个标签
+                tags.forEach { tag ->
+                    FilterChip(
+                        label = { Text(tag.name) },
+                        selected = selectedTagId == tag.id,
+                        onClick = { onTagSelected(if (selectedTagId == tag.id) null else tag.id) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = getElevatedBackground(),
+                            selectedLabelColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
                 }
             }
         }

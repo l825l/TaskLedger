@@ -80,7 +80,9 @@ data class LedgerCenterUiState(
     // 标签管理
     val allTags: List<Tag> = emptyList(),
     val tagTaskCounts: Map<Long, Int> = emptyMap(),
-    val showTagManagementDialog: Boolean = false
+    val showTagManagementDialog: Boolean = false,
+    // 标签筛选
+    val selectedTagId: Long? = null
 )
 
 /**
@@ -493,6 +495,16 @@ class LedgerCenterViewModel(
                     Log.e(TAG, "删除标签失败", error)
                 }
         }
+    }
+
+    // ==================== 标签筛选相关 ====================
+
+    /**
+     * 选择标签筛选
+     */
+    fun onTagFilterChange(tagId: Long?) {
+        _uiState.value = _uiState.value.copy(selectedTagId = tagId)
+        loadLedgerData()
     }
 
     override fun onCleared() {

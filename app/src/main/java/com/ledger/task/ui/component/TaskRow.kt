@@ -3,6 +3,7 @@ package com.ledger.task.ui.component
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,8 +17,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ledger.task.domain.model.DisplayStatus
 import com.ledger.task.domain.model.Task
 import com.ledger.task.ui.theme.getBorderDim
@@ -35,7 +39,8 @@ fun TaskRow(
     task: Task,
     index: Int,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    tagInfo: Pair<String, Color>? = null  // 标签名称和颜色
 ) {
     val formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
     val today = LocalDate.now().toEpochDay()
@@ -93,6 +98,24 @@ fun TaskRow(
 
             // 状态
             StatusTag(displayStatus = task.displayStatus)
+
+            // 标签信息（如果有）
+            if (tagInfo != null) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(tagInfo.second.copy(alpha = 0.2f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = tagInfo.first,
+                        color = tagInfo.second,
+                        fontSize = 10.sp,
+                        maxLines = 1
+                    )
+                }
+            }
         }
 
         Spacer(
