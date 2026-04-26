@@ -12,17 +12,18 @@ import java.time.LocalDateTime
 
 /**
  * Room 数据库
- * 版本 8：添加子任务表
+ * 版本 9：添加标签表和任务-标签关联表
  */
 @Database(
-    entities = [TaskEntity::class, SubTaskEntity::class],
-    version = 8,
+    entities = [TaskEntity::class, SubTaskEntity::class, TagEntity::class, TaskTagCrossRef::class],
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun subTaskDao(): SubTaskDao
+    abstract fun tagDao(): TagDao
 }
 
 /**
@@ -72,6 +73,36 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
             )
         """)
         db.execSQL("CREATE INDEX IF NOT EXISTS index_sub_tasks_parentId ON sub_tasks (parentId)")
+    }
+}
+
+/**
+ * 数据库迁移：版本 8 -> 9，添加标签表和任务-标签关联表
+ */
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // 创建标签表
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS tags (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                name TEXT NOT NULL,
+                colorArgb INTEGER NOT NULL,
+                createdAt INTEGER NOT NULL
+            )
+        """)
+        // 创建任务-标签关联表
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS task_tags (
+                taskId INTEGER NOT NULL,
+                tagId INTEGER NOT NULL,
+                PRIMARY KEY(taskId, tagId),
+                FOREIGN KEY(taskId) REFERENCES tasks(id) ON DELETE CASCADE,
+                FOREIGN KEY(tagId) REFERENCES tags(id) ON DELETE CASCADE
+            )
+        """)
+        // 创建索引
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_task_tags_taskId ON task_tags (taskId)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_task_tags_tagId ON task_tags (tagId)")
     }
 }
 

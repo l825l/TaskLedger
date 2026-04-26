@@ -7,6 +7,7 @@ import com.ledger.task.data.local.MIGRATION_4_5
 import com.ledger.task.data.local.MIGRATION_5_6
 import com.ledger.task.data.local.MIGRATION_6_7
 import com.ledger.task.data.local.MIGRATION_7_8
+import com.ledger.task.data.local.MIGRATION_8_9
 import com.ledger.task.data.local.SqlCipherSupportFactory
 import com.ledger.task.data.repository.TaskRepositoryImpl
 import com.ledger.task.domain.repository.TaskRepository
@@ -43,7 +44,7 @@ val appModule = module {
         val passphrase = DatabaseKeyManager.getOrCreateKey(context)
         Room.databaseBuilder(context, AppDatabase::class.java, "task_ledger")
             .openHelperFactory(SqlCipherSupportFactory.create(passphrase))
-            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+            .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
             .fallbackToDestructiveMigration()
             .build()
     }
